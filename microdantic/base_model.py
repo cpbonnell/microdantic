@@ -1,8 +1,17 @@
 class Field:
 
-    def __init__(self, data_type: type, validations: None | list[callable] = None):
+    def __init__(
+        self, data_type: type, default=None, validations: None | list[callable] = None
+    ):
+        # validations is a list of callables that take a single argument and return a boolean
         self._validations = validations if validations is not None else list()
         self._validations.append(lambda x: isinstance(x, data_type))
+
+        # If we have a default, ensure it is valid and store it
+        self._assert_all_validations(default)
+        self.default = default
+
+        # Store our other parameters
         self.data_type = data_type
         self.private_name = None
 
