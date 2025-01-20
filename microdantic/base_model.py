@@ -1,15 +1,28 @@
 class Field:
-    """A descriptor that contains information about a field."""
 
-    def __init__(self, data_type: type):
+    def __init__(self, data_type: type, validations: None | list[callable] = None):
+        self._validations = validations if validations is not None else list()
+        self._validations.append(lambda x: isinstance(x, data_type))
         self.data_type = data_type
+        self.private_name = None
 
-    def make_property(self, default_value) -> property:
-        assert isinstance(default_value, self.data_type)
-        value = default_value
-        return property(
-            lambda x: value,
-        )
+    def _assert_all_validations(self, value):
+        for validation in self._validations:
+            if not validation(value):
+                raise ValueError(f"Value {value} failed validation {validation}")
+
+    def __set_name__(self, owner, name):
+        self.private_name = f"_{name}"
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        else:
+            return getattr(instance, self.private_name)
+
+    def __set__(self, instance, value):
+        self._assert_all_validations(value)
+        setattr(instance, self.private_name, value)
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.data_type})"
@@ -22,7 +35,8 @@ class BaseModel:
         print(f"===== Running BaseModel.__new__({args}, {kwargs}) =====")
 
         obj = super().__new__(cls)
-        # TODO: fill in attributes here
+        for name, field in cls.fields_dict_().items():
+            setattr(obj, name, field.make_property(kwargs.get(name)))
 
         return obj
 
