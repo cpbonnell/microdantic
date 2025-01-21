@@ -1,11 +1,17 @@
 class Field:
 
     def __init__(
-        self, data_type: type, default=None, validations: None | list[callable] = None
+        self,
+        data_type: type,
+        default=None,
+        validations: None | list[callable] = None,
+        required: bool = False,
     ):
         # validations is a list of callables that take a single argument and return a boolean
         self._validations = validations if validations is not None else list()
-        self._validations.append(lambda x: isinstance(x, data_type))
+
+        real_data_type = data_type if required else data_type | None
+        self._validations.append(lambda x: isinstance(x, real_data_type))
 
         # If we have a default, ensure it is valid and store it
         self._assert_all_validations(default)
@@ -26,8 +32,11 @@ class Field:
     def __get__(self, instance, owner):
         if instance is None:
             return self
-        else:
-            return getattr(instance, self.private_name)
+
+        if not hasattr(instance, self.private_name) and self.default is not None:
+            setattr(instance, self.private_name, self.default)
+
+        return getattr(instance, self.private_name)
 
     def __set__(self, instance, value):
         self._assert_all_validations(value)
@@ -37,42 +46,37 @@ class Field:
         return f"{self.__class__.__name__}({self.data_type})"
 
 
-class BaseModel:
+class BaseModelMeta(type):
+    def __new__(mcls, name, bases, namespace):
+        print(
+            f"""
+            Running BaseModelMeta.__new__()
+            mcsl: {mcls}
+            name: {name}
+            bases: {bases}
+            namespace: {namespace}
+            """.strip()
+        )
+        # Gather any type hints the user wrote (e.g. `x: int`, `y: str`)
+        annotations = namespace.get("__annotations__", {})
 
-    @classmethod
-    def __new__(cls, *args, **kwargs):
-        print(f"===== Running BaseModel.__new__({args}, {kwargs}) =====")
+        for attr_name, attr_type in annotations.items():
+            # If the user hasn't already provided a custom descriptor or value
+            # for attr_name in the class body, insert a Field descriptor
+            if attr_name not in namespace:
+                namespace[attr_name] = Field(data_type=attr_type)
 
-        obj = super().__new__(cls)
-        for name, field in cls.fields_dict_().items():
-            setattr(obj, name, field.make_property(kwargs.get(name)))
+        # Create the new class object
+        cls = super().__new__(mcls, name, bases, namespace)
+        return cls
 
-        return obj
 
-    def __init__(self, *args, **kwargs):
-        print(f"===== Running BaseModel.__init__({args}, {kwargs}) =====")
+class BaseModel(metaclass=BaseModelMeta):
+    """
+    Any class inheriting from BaseModel will have all type-annotated
+    fields automatically converted into Field descriptors.
+    """
 
-    @classmethod
-    def raw_fields_dict_(cls):
-        """Fields and their values as specified by the subclass."""
-        return {
-            k: v
-            for k, v in cls.__dict__.items()
-            if isinstance(v, Field) or isinstance(v, type)
-        }
-
-    @classmethod
-    def fields_dict_(cls) -> dict[str, Field]:
-        """Fully instantiated fields for the subclass."""
-        actual_fields = dict()
-        for name, field in cls.raw_fields_dict_().items():
-            if isinstance(field, Field):
-                actual_fields[name] = field
-            elif isinstance(field, type):
-                actual_fields[name] = Field(field)
-            else:
-                raise ValueError(
-                    f"Unexpected field type {field}, should be Field or type"
-                )
-
-        return actual_fields
+    def __init__(self, **kwargs):
+        for field_name, value in kwargs.items():
+            setattr(self, field_name, value)
