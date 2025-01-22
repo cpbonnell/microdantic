@@ -61,10 +61,15 @@ class BaseModelMeta(type):
         annotations = namespace.get("__annotations__", {})
 
         for attr_name, attr_type in annotations.items():
-            # If the user hasn't already provided a custom descriptor or value
-            # for attr_name in the class body, insert a Field descriptor
-            if attr_name not in namespace:
-                namespace[attr_name] = Field(data_type=attr_type)
+            # If the user hasn't already provided a custom descriptor
+            # for in the class body, insert a Field descriptor with the
+            # user specified type as the dtype, and the user specified
+            # value as the default value for the field.
+            user_supplied_value = namespace.get(attr_name, None)
+            if not isinstance(user_supplied_value, Field):
+                namespace[attr_name] = Field(
+                    data_type=attr_type, default=user_supplied_value
+                )
 
         # Create the new class object
         cls = super().__new__(mcls, name, bases, namespace)
