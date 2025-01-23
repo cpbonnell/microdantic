@@ -85,3 +85,21 @@ class BaseModel(metaclass=BaseModelMeta):
     def __init__(self, **kwargs):
         for field_name, value in kwargs.items():
             setattr(self, field_name, value)
+
+    def model_dump(self) -> dict:
+        """
+        Serialize the model to a dictionary.
+
+        If a field value is another BaseModel, recursively call model_dump() on it.
+        """
+        output = {}
+        # You can either iterate over __annotations__ or check class dict for Field objects
+        for field_name, descriptor in self.__class__.__dict__.items():
+            if isinstance(descriptor, Field):
+                value = getattr(self, field_name)
+                # Check for nested BaseModel objects
+                if isinstance(value, BaseModel):
+                    output[field_name] = value.model_dump()
+                else:
+                    output[field_name] = value
+        return output
