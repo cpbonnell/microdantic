@@ -47,15 +47,6 @@ class Field:
 
 class BaseModelMeta(type):
     def __new__(mcls, name, bases, namespace):
-        print(
-            f"""
-            Running BaseModelMeta.__new__()
-            mcsl: {mcls}
-            name: {name}
-            bases: {bases}
-            namespace: {namespace}
-            """.strip()
-        )
         # Gather any type hints the user wrote (e.g. `x: int`, `y: str`)
         annotations = namespace.get("__annotations__", {})
 
