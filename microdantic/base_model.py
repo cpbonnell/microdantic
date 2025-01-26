@@ -1,3 +1,6 @@
+import json
+
+
 class Field:
     def __init__(
         self,
@@ -137,3 +140,18 @@ class BaseModel(metaclass=BaseModelMeta):
                             f"Missing required field '{field_name}' for {cls.__name__}"
                         )
         return instance
+
+    def model_dump_json(self) -> str:
+        return json.dumps(self.model_dump())
+
+    @classmethod
+    def model_validate_json(cls, data: str):
+        return cls.model_validate(json.loads(data))
+
+    def model_dump_binary(self, newline: bool = True) -> bytes:
+        additional_char = b"\n" if newline else b""
+        return self.model_dump_json().encode() + additional_char
+
+    @classmethod
+    def model_validate_binary(cls, data: bytes):
+        return cls.model_validate_json(data.decode())
