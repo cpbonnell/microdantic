@@ -76,6 +76,18 @@ class BaseModel(metaclass=BaseModelMeta):
         for field_name, value in kwargs.items():
             setattr(self, field_name, value)
 
+    def __repr__(self):
+        """
+        Provide a string representation of the model
+        that includes its class name and field values.
+        """
+        field_values = ", ".join(
+            f"{field_name}={repr(getattr(self, field_name))}"
+            for field_name, descriptor in self.__class__.__dict__.items()
+            if isinstance(descriptor, Field)
+        )
+        return f"{self.__class__.__name__}({field_values})"
+
     def model_dump(self) -> dict:
         """
         Serialize the model to a dictionary.
