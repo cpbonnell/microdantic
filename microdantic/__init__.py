@@ -1,1 +1,1 @@
-from microdantic import Field, BaseModel
+from microdantic.microdantic import Field, BaseModel
