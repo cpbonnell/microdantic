@@ -1,3 +1,6 @@
+import json
+
+
 class Field:
     def __init__(
         self,
@@ -47,15 +50,6 @@ class Field:
 
 class BaseModelMeta(type):
     def __new__(mcls, name, bases, namespace):
-        print(
-            f"""
-            Running BaseModelMeta.__new__()
-            mcsl: {mcls}
-            name: {name}
-            bases: {bases}
-            namespace: {namespace}
-            """.strip()
-        )
         # Gather any type hints the user wrote (e.g. `x: int`, `y: str`)
         annotations = namespace.get("__annotations__", {})
 
@@ -84,6 +78,18 @@ class BaseModel(metaclass=BaseModelMeta):
     def __init__(self, **kwargs):
         for field_name, value in kwargs.items():
             setattr(self, field_name, value)
+
+    def __repr__(self):
+        """
+        Provide a string representation of the model
+        that includes its class name and field values.
+        """
+        field_values = ", ".join(
+            f"{field_name}={repr(getattr(self, field_name))}"
+            for field_name, descriptor in self.__class__.__dict__.items()
+            if isinstance(descriptor, Field)
+        )
+        return f"{self.__class__.__name__}({field_values})"
 
     def model_dump(self) -> dict:
         """
@@ -134,3 +140,18 @@ class BaseModel(metaclass=BaseModelMeta):
                             f"Missing required field '{field_name}' for {cls.__name__}"
                         )
         return instance
+
+    def model_dump_json(self) -> str:
+        return json.dumps(self.model_dump())
+
+    @classmethod
+    def model_validate_json(cls, data: str):
+        return cls.model_validate(json.loads(data))
+
+    def model_dump_binary(self, newline: bool = True) -> bytes:
+        additional_char = b"\n" if newline else b""
+        return self.model_dump_json().encode() + additional_char
+
+    @classmethod
+    def model_validate_binary(cls, data: bytes):
+        return cls.model_validate_json(data.decode())
