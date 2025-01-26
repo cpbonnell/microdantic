@@ -1,5 +1,7 @@
-class Field:
+from dataclasses import field
 
+
+class Field:
     def __init__(
         self,
         data_type: type,
@@ -103,3 +105,35 @@ class BaseModel(metaclass=BaseModelMeta):
                 else:
                     output[field_name] = value
         return output
+
+    @classmethod
+    def model_validate(cls, data: dict):
+        """
+        Create a new instance of `cls` from a dict, performing validation.
+        """
+        # Create an instance, but check each Field's 'required' status
+        # and set the value from `data` if present.
+        instance = cls()
+        for field_name, descriptor in cls.__dict__.items():
+            if isinstance(descriptor, Field):
+
+                # Check if the field is in data
+                if field_name in data:
+
+                    # If the field is a BaseModel, recursively validate it.
+                    # Otherwise, just naively keep the value.
+                    if issubclass(descriptor.data_type, BaseModel):
+                        field_value = descriptor.data_type.model_validate(
+                            data[field_name]
+                        )
+                    else:
+                        field_value = data[field_name]
+
+                    setattr(instance, field_name, field_value)
+                else:
+                    # If the field is required and not in data, raise an error
+                    if descriptor.required and descriptor.default is None:
+                        raise ValueError(
+                            f"Missing required field '{field_name}' for {cls.__name__}"
+                        )
+        return instance
