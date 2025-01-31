@@ -1,157 +1,67 @@
-import json
-
-
 class Field:
     def __init__(
         self,
         data_type: type,
         default=None,
-        validations: None | list[callable] = None,
-        required: bool = False,
     ):
-        # validations is a list of callables that take a single argument and return a boolean
-        self._validations = validations if validations is not None else list()
-
-        real_data_type = data_type if required else data_type | None
-        self._validations.append(lambda x: isinstance(x, real_data_type))
-
-        # If we have a default, ensure it is valid and store it
-        self._assert_all_validations(default)
         self.default = default
 
         # Store our other parameters
         self.data_type = data_type
         self.private_name = None
 
-    def _assert_all_validations(self, value):
-        for validation in self._validations:
-            if not validation(value):
-                raise ValueError(f"Value {value} failed validation {validation}")
-
     def __set_name__(self, owner, name):
+        print(f"__set_name__({owner}, {name})")
         self.private_name = f"_{name}"
 
     def __get__(self, instance, owner):
         if instance is None:
             return self
 
+        print(f"Attempting to get {self.private_name} from {instance}")
         if not hasattr(instance, self.private_name) and self.default is not None:
             setattr(instance, self.private_name, self.default)
 
         return getattr(instance, self.private_name)
 
     def __set__(self, instance, value):
-        self._assert_all_validations(value)
         setattr(instance, self.private_name, value)
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.data_type})"
 
 
-class BaseModelMeta(type):
-    def __new__(mcls, name, bases, namespace):
-        # Gather any type hints the user wrote (e.g. `x: int`, `y: str`)
-        annotations = namespace.get("__annotations__", {})
-
-        for attr_name, attr_type in annotations.items():
-            # If the user hasn't already provided a custom descriptor
-            # for in the class body, insert a Field descriptor with the
-            # user specified type as the dtype, and the user specified
-            # value as the default value for the field.
-            user_supplied_value = namespace.get(attr_name, None)
-            if not isinstance(user_supplied_value, Field):
-                namespace[attr_name] = Field(
-                    data_type=attr_type, default=user_supplied_value
-                )
-
-        # Create the new class object
-        cls = super().__new__(mcls, name, bases, namespace)
-        return cls
-
-
-class BaseModel(metaclass=BaseModelMeta):
-    """
-    Any class inheriting from BaseModel will have all type-annotated
-    fields automatically converted into Field descriptors.
-    """
-
-    def __init__(self, **kwargs):
-        for field_name, value in kwargs.items():
-            setattr(self, field_name, value)
-
-    def __repr__(self):
-        """
-        Provide a string representation of the model
-        that includes its class name and field values.
-        """
-        field_values = ", ".join(
-            f"{field_name}={repr(getattr(self, field_name))}"
-            for field_name, descriptor in self.__class__.__dict__.items()
-            if isinstance(descriptor, Field)
-        )
-        return f"{self.__class__.__name__}({field_values})"
-
-    def model_dump(self) -> dict:
-        """
-        Serialize the model to a dictionary.
-
-        If a field value is another BaseModel, recursively call model_dump() on it.
-        """
-        output = {}
-        # You can either iterate over __annotations__ or check class dict for Field objects
-        for field_name, descriptor in self.__class__.__dict__.items():
-            if isinstance(descriptor, Field):
-                value = getattr(self, field_name)
-                # Check for nested BaseModel objects
-                if isinstance(value, BaseModel):
-                    output[field_name] = value.model_dump()
-                else:
-                    output[field_name] = value
-        return output
+class BaseModel:
 
     @classmethod
-    def model_validate(cls, data: dict):
+    def register_class(cls):
         """
-        Create a new instance of `cls` from a dict, performing validation.
+        Call this method immediately after defining a new child class.
+
+        This is necessary because MicroPython does not support metaclasses, and
+        so any custom behavior needs to be in a function that is invoked
+        explicitly. MicroPython also does not (yet) do all of the normal magic
+        around class definition, so we have to do some of the work ourselves.
         """
-        # Create an instance, but check each Field's 'required' status
-        # and set the value from `data` if present.
-        instance = cls()
-        for field_name, descriptor in cls.__dict__.items():
-            if isinstance(descriptor, Field):
 
-                # Check if the field is in data
-                if field_name in data:
+        # Look over the class dictionary and create Field objects for any
+        # attributes that are not already Fields.
+        # NOTE: Some iterations of MicroPython (like Circuit Python) do not
+        # have the __annotations__ attribute, so we have to use __dict__
+        # instead, and infer the type from what is supplied as a default.
+        new_fields = dict()
+        for name, field in cls.__dict__.items():
+            if not name.startswith("_") and not isinstance(field, Field):
+                new_fields[name] = Field(data_type=type(field), default=field)
 
-                    # If the field is a BaseModel, recursively validate it.
-                    # Otherwise, just naively keep the value.
-                    if issubclass(descriptor.data_type, BaseModel):
-                        field_value = descriptor.data_type.model_validate(
-                            data[field_name]
-                        )
-                    else:
-                        field_value = data[field_name]
+        for name, field_obj in new_fields.items():
+            setattr(cls, name, field_obj)
 
-                    setattr(instance, field_name, field_value)
-                else:
-                    # If the field is required and not in data, raise an error
-                    if descriptor.required and descriptor.default is None:
-                        raise ValueError(
-                            f"Missing required field '{field_name}' for {cls.__name__}"
-                        )
-        return instance
-
-    def model_dump_json(self) -> str:
-        return json.dumps(self.model_dump())
-
-    @classmethod
-    def model_validate_json(cls, data: str):
-        return cls.model_validate(json.loads(data))
-
-    def model_dump_binary(self, newline: bool = True) -> bytes:
-        additional_char = b"\n" if newline else b""
-        return self.model_dump_json().encode() + additional_char
-
-    @classmethod
-    def model_validate_binary(cls, data: bytes):
-        return cls.model_validate_json(data.decode())
+        # Call the __set_name__ method for each field descriptor, since
+        # MicroPython does not do this automatically. This is theoretically
+        # on the roadmap for MP, and can be removed once they finally merge
+        # the PR that adds this feature.
+        for name, field in cls.__dict__.items():
+            if isinstance(field, Field):
+                print(f"Setting name for {field} to {name}")
+                field.__set_name__(cls, name)
