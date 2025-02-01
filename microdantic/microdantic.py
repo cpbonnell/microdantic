@@ -1,3 +1,6 @@
+__version__ = "0.1.0-rc1"
+
+
 def xxhash32(data, seed=0):
     """
     Optimized xxHash implementation for MicroPython.
