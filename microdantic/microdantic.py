@@ -5,7 +5,7 @@ def xxhash32(data, seed=0):
     """
     Optimized xxHash implementation for MicroPython.
 
-    Seee reference implementation on GitHub:
+    See reference implementation on GitHub:
     https://github.com/Cyan4973/xxHash
     """
 
