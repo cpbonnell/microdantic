@@ -15,8 +15,30 @@ running `poetry run tests` inside the project directory.
 from microdantic import Field, BaseModel
 
 
-def test_one():
-    print("...inside test_one")
+class Fruit(BaseModel):
+    name: str = Field(str)
+    quantity = 10
+    weight: float = 1.0
+
+
+Fruit.register_class()
+
+
+def test_construction_and_default_values():
+    print("...default apple")
+    default_apple = Fruit(name="apple")
+    assert default_apple.name == "apple"
+    assert default_apple.quantity == 10
+    assert default_apple.weight == 1.0
+    assert type(default_apple.name) == str
+    assert type(default_apple.quantity) == int
+    assert type(default_apple.weight) == float
+
+    print("...alternate apple")
+    alternate_apple = Fruit(name="apple", quantity=5, weight=5.0)
+    assert alternate_apple.name == "apple"
+    assert alternate_apple.quantity == 5
+    assert alternate_apple.weight == 5.0
 
 
 def test_two():
