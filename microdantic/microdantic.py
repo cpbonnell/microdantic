@@ -141,10 +141,22 @@ class Field:
             validations = list()
         elif isinstance(validations, list):
             assert all(callable(v) for v in validations)
+            validations = [
+                Validations.UserSuppliedLambda(v)
+                for v in validations
+                if not isinstance(v, Validations.BaseValidator)
+            ]
         else:
             raise ValueError("Validations must be a list of callables or None")
 
-        self._validations = validations
+        # Validators from the base parameters
+        self._validations = list()
+        self._validations.append(Validations.IsType(data_type))
+        if required:
+            self._validations.append(Validations.NotNull())
+
+        # Add all other validators
+        self._validations.extend(validations)
 
         # Check the default parameter and assign it
         self.default = default
