@@ -105,7 +105,7 @@ class BaseModel:
         # attributes that are not already Fields.
         # NOTE: Some iterations of MicroPython (like Circuit Python) do not
         # have the __annotations__ attribute, so we have to use __dict__
-        # instead, and infer the type from what is supplied as a default.
+        # instead, and infer the type from the value supplied as a default.
         new_fields = dict()
         for name, field in cls.__dict__.items():
             if not name.startswith("_") and not isinstance(field, Field):
@@ -131,3 +131,7 @@ class BaseModel:
         # TODO: In the future we might construct a struct format string
         #       here, but for now we just store the order of the fields.
         cls.__field_names__ = tuple(sorted(all_field_names))
+
+    def __init__(self, **kwargs):
+        for field_name, value in kwargs.items():
+            setattr(self, field_name, value)
