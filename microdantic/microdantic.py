@@ -59,20 +59,73 @@ def xxhash32(data, seed=0):
 
 
 class Validations:
+    class BaseValidator:
 
-    @staticmethod
-    def is_type_or_none(data_type: type):
-        def checker(value):
-            return value is None or isinstance(value, data_type)
+        def validate(self, value):
+            raise NotImplementedError
 
-        return checker
+        @property
+        def custom_error_message(self):
+            return f"Value failed validation {self}"
 
-    @staticmethod
-    def is_not_none():
-        def checker(value):
+        def __call__(self, value):
+            return value is None or self.validate(value)
+
+    class NotNull(BaseValidator):
+        def __call__(self, value):
+            """Overrides parent class method"""
             return value is not None
 
-        return checker
+        @property
+        def custom_error_message(self):
+            return "Value must not be None"
+
+    class IsType(BaseValidator):
+        def __init__(self, data_type):
+            self.data_type = data_type
+
+        @property
+        def custom_error_message(self):
+            return f"Value must be of type {self.data_type}"
+
+        def validate(self, value):
+            return isinstance(value, self.data_type)
+
+    class GreaterThan(BaseValidator):
+        def __init__(self, minimum):
+            self.minimum = minimum
+
+        @property
+        def custom_error_message(self):
+            return f"Value must be greater than {self.minimum}"
+
+        def validate(self, value):
+            return value > self.minimum
+
+    class LessThan(BaseValidator):
+        def __init__(self, maximum):
+            self.maximum = maximum
+
+        @property
+        def custom_error_message(self):
+            return f"Value must be less than {self.maximum}"
+
+        def validate(self, value):
+            return value < self.maximum
+
+    class UserSuppliedLambda(BaseValidator):
+        def __init__(self, lambda_function, error_text=None):
+            self.lambda_function = lambda_function
+            self.error_text = error_text
+
+        @property
+        def custom_error_message(self):
+            if self.error_text:
+                return self.error_text
+            return f"Value must pass the user-supplied lambda function"
+
+        def validate(self, value):
+            return self.lambda_function(value)
 
 
 class Field:
@@ -93,16 +146,17 @@ class Field:
 
         self._validations = validations
 
-        self._validations.append(Validations.is_type_or_none(data_type))
-        if required:
-            self._validations.append(Validations.is_not_none())
-
         # Check the default parameter and assign it
         self.default = default
 
         # Store our other parameters
         self.data_type = data_type
         self.private_name = None
+
+    def _assert_all_validations(self, value):
+        for validation in self._validations:
+            if not validation(value):
+                raise ValueError(f"Value {value} failed validation {validation}")
 
     def __set_name__(self, owner, name):
         self.private_name = f"_{name}"
