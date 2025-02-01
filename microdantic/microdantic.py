@@ -71,14 +71,12 @@ class Field:
         self.private_name = None
 
     def __set_name__(self, owner, name):
-        print(f"__set_name__({owner}, {name})")
         self.private_name = f"_{name}"
 
     def __get__(self, instance, owner):
         if instance is None:
             return self
 
-        print(f"Attempting to get {self.private_name} from {instance}")
         if not hasattr(instance, self.private_name) and self.default is not None:
             setattr(instance, self.private_name, self.default)
 
@@ -124,7 +122,6 @@ class BaseModel:
         all_field_names = list()
         for name, field in cls.__dict__.items():
             if isinstance(field, Field):
-                print(f"Setting name for {field} to {name}")
                 field.__set_name__(cls, name)
                 all_field_names.append(name)
 
