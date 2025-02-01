@@ -135,6 +135,8 @@ class Field:
         default=None,
         validations: None | list[callable] = None,
         required: bool = False,
+        min_value=None,
+        max_value=None,
     ):
         # Check the validations parameter and assign it
         if validations is None:
@@ -142,9 +144,12 @@ class Field:
         elif isinstance(validations, list):
             assert all(callable(v) for v in validations)
             validations = [
-                Validations.UserSuppliedLambda(v)
+                (
+                    v
+                    if isinstance(v, Validations.BaseValidator)
+                    else Validations.UserSuppliedLambda(v)
+                )
                 for v in validations
-                if not isinstance(v, Validations.BaseValidator)
             ]
         else:
             raise ValueError("Validations must be a list of callables or None")
@@ -152,8 +157,15 @@ class Field:
         # Validators from the base parameters
         self._validations = list()
         self._validations.append(Validations.IsType(data_type))
+
         if required:
             self._validations.append(Validations.NotNull())
+
+        if min_value is not None:
+            self._validations.append(Validations.GreaterThan(min_value))
+
+        if max_value is not None:
+            self._validations.append(Validations.LessThan(max_value))
 
         # Add all other validators
         self._validations.extend(validations)
