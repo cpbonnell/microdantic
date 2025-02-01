@@ -166,9 +166,20 @@ class Field:
         self.private_name = None
 
     def _assert_all_validations(self, value):
+        error_messages = list()
         for validation in self._validations:
             if not validation(value):
-                raise ValueError(f"Value {value} failed validation {validation}")
+                if hasattr(validation, "custom_error_message"):
+                    error_messages.append(validation.custom_error_message)
+                else:
+                    error_messages.append(
+                        f"Value {value} failed validation {validation}"
+                    )
+
+        if len(error_messages) > 0:
+            raise ValueError(
+                "Failed the following validations: \n-- " + "\n-- ".join(error_messages)
+            )
 
     def __set_name__(self, owner, name):
         self.private_name = f"_{name}"
