@@ -159,6 +159,7 @@ class Field:
         self._validations.extend(validations)
 
         # Check the default parameter and assign it
+        self._assert_all_validations(default)
         self.default = default
 
         # Store our other parameters
@@ -194,6 +195,7 @@ class Field:
         return getattr(instance, self.private_name)
 
     def __set__(self, instance, value):
+        self._assert_all_validations(value)
         setattr(instance, self.private_name, value)
 
     def __repr__(self):
