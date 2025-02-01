@@ -58,12 +58,46 @@ def xxhash32(data, seed=0):
     return h32
 
 
+class Validations:
+
+    @staticmethod
+    def is_type_or_none(data_type: type):
+        def checker(value):
+            return value is None or isinstance(value, data_type)
+
+        return checker
+
+    @staticmethod
+    def is_not_none():
+        def checker(value):
+            return value is not None
+
+        return checker
+
+
 class Field:
     def __init__(
         self,
         data_type: type,
         default=None,
+        validations: None | list[callable] = None,
+        required: bool = False,
     ):
+        # Check the validations parameter and assign it
+        if validations is None:
+            validations = list()
+        elif isinstance(validations, list):
+            assert all(callable(v) for v in validations)
+        else:
+            raise ValueError("Validations must be a list of callables or None")
+
+        self._validations = validations
+
+        self._validations.append(Validations.is_type_or_none(data_type))
+        if required:
+            self._validations.append(Validations.is_not_none())
+
+        # Check the default parameter and assign it
         self.default = default
 
         # Store our other parameters
