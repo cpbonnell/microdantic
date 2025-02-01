@@ -1,3 +1,6 @@
+__version__ = "0.1.0-rc1"
+
+
 def xxhash32(data, seed=0):
     """
     Optimized xxHash implementation for MicroPython.
@@ -68,14 +71,12 @@ class Field:
         self.private_name = None
 
     def __set_name__(self, owner, name):
-        print(f"__set_name__({owner}, {name})")
         self.private_name = f"_{name}"
 
     def __get__(self, instance, owner):
         if instance is None:
             return self
 
-        print(f"Attempting to get {self.private_name} from {instance}")
         if not hasattr(instance, self.private_name) and self.default is not None:
             setattr(instance, self.private_name, self.default)
 
@@ -105,7 +106,7 @@ class BaseModel:
         # attributes that are not already Fields.
         # NOTE: Some iterations of MicroPython (like Circuit Python) do not
         # have the __annotations__ attribute, so we have to use __dict__
-        # instead, and infer the type from what is supplied as a default.
+        # instead, and infer the type from the value supplied as a default.
         new_fields = dict()
         for name, field in cls.__dict__.items():
             if not name.startswith("_") and not isinstance(field, Field):
@@ -121,7 +122,6 @@ class BaseModel:
         all_field_names = list()
         for name, field in cls.__dict__.items():
             if isinstance(field, Field):
-                print(f"Setting name for {field} to {name}")
                 field.__set_name__(cls, name)
                 all_field_names.append(name)
 
@@ -131,3 +131,7 @@ class BaseModel:
         # TODO: In the future we might construct a struct format string
         #       here, but for now we just store the order of the fields.
         cls.__field_names__ = tuple(sorted(all_field_names))
+
+    def __init__(self, **kwargs):
+        for field_name, value in kwargs.items():
+            setattr(self, field_name, value)
