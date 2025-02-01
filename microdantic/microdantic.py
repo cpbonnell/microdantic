@@ -118,7 +118,16 @@ class BaseModel:
         # MicroPython does not do this automatically. This is theoretically
         # on the roadmap for MP, and can be removed once they finally merge
         # the PR that adds this feature.
+        all_field_names = list()
         for name, field in cls.__dict__.items():
             if isinstance(field, Field):
                 print(f"Setting name for {field} to {name}")
                 field.__set_name__(cls, name)
+                all_field_names.append(name)
+
+        # Reliably automating the struct packing process requires a
+        # consistent ordering of the fields, so we determine a fixed
+        # order here and store it in the class.
+        # TODO: In the future we might construct a struct format string
+        #       here, but for now we just store the order of the fields.
+        cls.__field_names__ = tuple(sorted(all_field_names))
