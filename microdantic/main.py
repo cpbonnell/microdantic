@@ -24,6 +24,11 @@ class Fruit(BaseModel):
     weight: float = 1.0
 
 
+class FruitSalad(BaseModel):
+    ingredient_1 = Field(Fruit)
+    ingredient_2 = Field(Fruit)
+
+
 is_even = Validations.UserSuppliedLambda(lambda x: x % 2 == 0, "Value must be even")
 
 
@@ -37,6 +42,7 @@ class ModelWithValidations(BaseModel):
 
 
 Fruit.register_class()
+FruitSalad.register_class()
 ModelWithValidations.register_class()
 
 
@@ -148,6 +154,19 @@ def test_serialization_methods():
     assert ff.name == "apple"
     assert ff.quantity == 5
     assert ff.weight == 5.0
+
+
+def test_recursive_serialization():
+    print("...recursive serialization")
+    fs = FruitSalad(ingredient_1=Fruit(name="apple"), ingredient_2=Fruit(name="banana"))
+
+    data = fs.model_dump()
+    fs2 = FruitSalad.model_validate(data)
+    assert isinstance(fs2, FruitSalad)
+    assert isinstance(fs2.ingredient_1, Fruit)
+    assert isinstance(fs2.ingredient_2, Fruit)
+    assert fs2.ingredient_1.name == "apple"
+    assert fs2.ingredient_2.name == "banana"
 
 
 def run_tests():
