@@ -23,8 +23,6 @@ class Fruit(BaseModel):
     weight: float = 1.0
 
 
-Fruit.register_class()
-
 is_even = Validations.UserSuppliedLambda(lambda x: x % 2 == 0, "Value must be even")
 
 
@@ -33,8 +31,11 @@ class ModelWithValidations(BaseModel):
     optional_positive_float = Field(
         float, default=1.0, required=False, validations=[Validations.GreaterThan(0)]
     )
+    set_of_values = Field(int, default=1, validations=[Validations.OneOf([1, 2, 3])])
+    max_len_string = Field(str, default="abc", validations=[Validations.MaxLen(10)])
 
 
+Fruit.register_class()
 ModelWithValidations.register_class()
 
 
@@ -74,6 +75,18 @@ def test_validations():
     mod.optional_positive_float = None
     assert mod.optional_positive_float is None
 
+    print("...valid assignments to required_even_int")
+    mod.set_of_values = 3
+    assert mod.set_of_values == 3
+    mod.set_of_values = 2
+    assert mod.set_of_values == 2
+
+    print("...valid assignments to max_len_string")
+    mod.max_len_string = "a"
+    assert mod.max_len_string == "a"
+    mod.max_len_string = "abcdefghij"
+    assert mod.max_len_string == "abcdefghij"
+
     print("...error raised on assignment 'mod.required_even_int = 3.0'")
     try:
         mod.even_int = 3.0
@@ -99,6 +112,22 @@ def test_validations():
         assert "Failed the following validations:" in error_text
         assert "-- Value must be of type <class 'float'>" in error_text
         assert "-- Value must be greater than 0" in error_text
+
+    print("...error raised on assignment 'mod.set_of_values = 4'")
+    try:
+        mod.set_of_values = 4
+    except ValueError as e:
+        error_text = e.args[0]
+        assert "Failed the following validations:" in error_text
+        assert "-- Value must be one of" in error_text
+
+    print("...error raised on assignment 'mod.max_len_string = 'abcdefghijk'")
+    try:
+        mod.max_len_string = "abcdefghijk"
+    except ValueError as e:
+        error_text = e.args[0]
+        assert "Failed the following validations:" in error_text
+        assert "-- Value must have length less than 10" in error_text
 
 
 def run_tests():
