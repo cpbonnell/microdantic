@@ -226,10 +226,10 @@ class Field:
                     )
 
         if len(validation_messages) > 0:
-            error_text = (
-                f"The following validations failed when attempting \n"
-                f"to assign the value '{value}' to field '{self.name}':"
-            )
+            error_text = f"""
+                The following validations failed when attempting 
+                to assign the value '{value}' to field '{self.name}':
+                """.lstrip()
             for validation_message in validation_messages:
                 error_text += "\n-- " + validation_message
             raise ValueError(error_text)
