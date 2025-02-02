@@ -1,4 +1,4 @@
-__version__ = "0.1.0-rc5"
+__version__ = "0.1.0-rc6"
 import json
 
 
