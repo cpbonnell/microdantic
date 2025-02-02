@@ -301,3 +301,25 @@ class BaseModel:
                 value = class_dict[field_name].default
 
             setattr(self, field_name, value)
+
+    def model_dump(self) -> dict:
+        """
+        Serialize the model to a dictionary.
+        """
+        output = dict()
+        for field_name, descriptor in self.__class__.__dict__.items():
+            if isinstance(descriptor, Field):
+                value = getattr(self, field_name)
+                output[field_name] = value
+        return output
+
+    @classmethod
+    def model_validate(cls, data: dict):
+        """
+        Validate a dictionary of data against the model's fields and return an instance.
+
+        :param data: A dictionary of data to validate.
+        :return: An instance of the model class.
+        """
+        instance = cls(**data)
+        return instance
