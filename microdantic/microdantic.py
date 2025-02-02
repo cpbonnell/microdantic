@@ -1,4 +1,4 @@
-__version__ = "0.1.0-rc6"
+__version__ = "0.1.0-rc7"
 import json
 
 
@@ -72,73 +72,9 @@ class Validations:
         def __call__(self, value):
             return value is None or self.validate(value)
 
-    class NotNull(BaseValidator):
-        def __call__(self, value):
-            """Overrides parent class method"""
-            return value is not None
-
-        @property
-        def custom_error_message(self):
-            return "Value must not be None"
-
-    class IsType(BaseValidator):
-        def __init__(self, data_type):
-            self.data_type = data_type
-
-        @property
-        def custom_error_message(self):
-            return f"Value must be of type {self.data_type}"
-
-        def validate(self, value):
-            return isinstance(value, self.data_type)
-
-    class GreaterThan(BaseValidator):
-        def __init__(self, minimum):
-            self.minimum = minimum
-
-        @property
-        def custom_error_message(self):
-            return f"Value must be greater than {self.minimum}"
-
-        def validate(self, value):
-            return value > self.minimum
-
-    class LessThan(BaseValidator):
-        def __init__(self, maximum):
-            self.maximum = maximum
-
-        @property
-        def custom_error_message(self):
-            return f"Value must be less than {self.maximum}"
-
-        def validate(self, value):
-            return value < self.maximum
-
-    class MaxLen(BaseValidator):
-        def __init__(self, max_len):
-            self.max_len = max_len
-
-        @property
-        def custom_error_message(self):
-            return f"Value must have length less than {self.max_len}"
-
-        def validate(self, value):
-            return len(value) <= self.max_len
-
-    class OneOf(BaseValidator):
-        def __init__(self, valid_values):
-            self.valid_values = set(valid_values)
-
-        @property
-        def custom_error_message(self):
-            return f"Value must be one of {self.valid_values}"
-
-        def validate(self, value):
-            return value in self.valid_values
-
-    class UserSuppliedLambda(BaseValidator):
-        def __init__(self, lambda_function, error_text=None):
-            self.lambda_function = lambda_function
+    class Validator(BaseValidator):
+        def __init__(self, validator_function, error_text=None):
+            self.validator_function = validator_function
             self.error_text = error_text
 
         @property
@@ -148,7 +84,48 @@ class Validations:
             return f"Value must pass the user-supplied lambda function"
 
         def validate(self, value):
-            return self.lambda_function(value)
+            return self.validator_function(value)
+
+    class NotNull(BaseValidator):
+        def __call__(self, value):
+            """Overrides parent class method"""
+            return value is not None
+
+        @property
+        def custom_error_message(self):
+            return "Value must not be None"
+
+    class IsType(Validator):
+        def __init__(self, data_type):
+            super().__init__(
+                lambda x: isinstance(x, data_type), f"Value must be of type {data_type}"
+            )
+
+    class GreaterThan(Validator):
+        def __init__(self, minimum):
+            super().__init__(
+                lambda x: x > minimum, f"Value must be greater than {minimum}"
+            )
+
+    class LessThan(Validator):
+        def __init__(self, maximum):
+            super().__init__(
+                lambda x: x < maximum, f"Value must be less than {maximum}"
+            )
+
+    class MaxLen(Validator):
+        def __init__(self, max_len):
+            super().__init__(
+                lambda x: len(x) <= max_len,
+                f"Value must have length less than {max_len}",
+            )
+
+    class OneOf(Validator):
+        def __init__(self, valid_values):
+            super().__init__(
+                lambda x: x in set(valid_values),
+                f"Value must be one of {valid_values}",
+            )
 
 
 class ValidationError(Exception):
@@ -190,7 +167,7 @@ class Field:
                 (
                     v
                     if isinstance(v, Validations.BaseValidator)
-                    else Validations.UserSuppliedLambda(v)
+                    else Validations.Validator(v)
                 )
                 for v in validations
             ]

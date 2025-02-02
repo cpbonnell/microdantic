@@ -29,7 +29,7 @@ class FruitSalad(BaseModel):
     ingredient_2 = Field(Fruit)
 
 
-is_even = Validations.UserSuppliedLambda(lambda x: x % 2 == 0, "Value must be even")
+is_even = Validations.Validator(lambda x: x % 2 == 0, "Value must be even")
 
 
 class ModelWithValidations(BaseModel):
