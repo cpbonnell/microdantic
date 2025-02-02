@@ -145,7 +145,7 @@ class Field:
         data_type: type,
         default=None,
         validations: None | list[callable] = None,
-        required: bool = False,
+        required: bool = True,
         min_value=None,
         max_value=None,
         max_len=None,
@@ -185,8 +185,12 @@ class Field:
         # Add all other validators
         self._validations.extend(validations)
 
-        # Check the default parameter and assign it
-        self._assert_all_validations(default)
+        # Note: We do, in fact, want to assert all validations against
+        # the default value if one is supplied. But if no default
+        # value is supplied, then we don't want to enforce the NotNull
+        # constraint until the owner class is instantiated.
+        if default is not None:
+            self._assert_all_validations(default)
         self.default = default
 
         # Store our other parameters
@@ -273,5 +277,12 @@ class BaseModel:
         cls.__field_names__ = tuple(sorted(all_field_names))
 
     def __init__(self, **kwargs):
-        for field_name, value in kwargs.items():
+        class_dict = self.__class__.__dict__
+
+        for field_name in self.__field_names__:
+            if field_name in kwargs:
+                value = kwargs[field_name]
+            else:
+                value = class_dict[field_name].default
+
             setattr(self, field_name, value)

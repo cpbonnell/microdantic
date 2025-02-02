@@ -29,9 +29,9 @@ is_even = Validations.UserSuppliedLambda(lambda x: x % 2 == 0, "Value must be ev
 
 
 class ModelWithValidations(BaseModel):
-    required_even_int = Field(int, default=0, required=True, validations=[is_even])
+    even_int = Field(int, default=0, validations=[is_even])
     optional_positive_float = Field(
-        float, default=1.0, validations=[Validations.GreaterThan(0)]
+        float, default=1.0, required=False, validations=[Validations.GreaterThan(0)]
     )
 
 
@@ -61,10 +61,10 @@ def test_validations():
     mod = ModelWithValidations()
 
     print("...valid assignments to required_even_int")
-    mod.required_even_int = 2
-    assert mod.required_even_int == 2
-    mod.required_even_int = -4
-    assert mod.required_even_int == -4
+    mod.even_int = 2
+    assert mod.even_int == 2
+    mod.even_int = -4
+    assert mod.even_int == -4
 
     print("...valid assignments to optional_positive_float")
     mod.optional_positive_float = 3.5
@@ -76,7 +76,7 @@ def test_validations():
 
     print("...error raised on assignment 'mod.required_even_int = 3.0'")
     try:
-        mod.required_even_int = 3.0
+        mod.even_int = 3.0
     except ValueError as e:
         error_text = e.args[0]
         assert "Failed the following validations:" in error_text
@@ -85,7 +85,7 @@ def test_validations():
 
     print("...error raised on assignment 'mod.required_even_int = None'")
     try:
-        mod.required_even_int = None
+        mod.even_int = None
     except ValueError as e:
         error_text = e.args[0]
         assert "Failed the following validations:" in error_text
