@@ -1,6 +1,7 @@
 __version__ = "0.1.0-rc2"
 import json
 
+
 def xxhash32(data, seed=0):
     """
     Optimized xxHash implementation for MicroPython.
@@ -345,3 +346,19 @@ class BaseModel:
         :return: An instance of the model class.
         """
         return cls.model_validate(json.loads(json_string))
+
+    def model_dump_jsonb(self) -> bytes:
+        """
+        Serialize the model to a JSON bytes object.
+        """
+        return self.model_dump_json().encode("utf-8") + b"\n"
+
+    @classmethod
+    def model_validate_jsonb(cls, json_bytes: bytes):
+        """
+        Validate a JSON bytes object against the model's fields and return an instance.
+
+        :param json_bytes: A JSON bytes object of data to validate.
+        :return: An instance of the model class.
+        """
+        return cls.model_validate_json(json_bytes.decode("utf-8"))
