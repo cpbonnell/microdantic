@@ -136,6 +136,7 @@ def run_tests():
         name: obj for name, obj in globals().items() if name.startswith("test_")
     }
 
+    total_test_time = 0
     for name, executable in tests_to_run.items():
         if not callable(executable):
             print(f"Symbol {name} is not callable. Skipping execution.")
@@ -145,7 +146,11 @@ def run_tests():
         executable()
         end = time.monotonic()
 
+        total_test_time += end - start
         print(f"...test runtime was {(end-start)*1000:.3f} ms")
+
+    print("==================== Test Suite Complete ====================")
+    print(f"Total test time: {total_test_time:.3f} seconds")
 
 
 if __name__ == "__main__":
