@@ -151,6 +151,24 @@ class Validations:
             return self.lambda_function(value)
 
 
+class ValidationError(Exception):
+    def __init__(self, validation_messages: list[str], field_name: str, new_value):
+        error_text = "The following validations failed"
+
+        if field_name and new_value:
+            error_text += f" when attempting to assign the value '{new_value}' to field '{field_name}':"
+        else:
+            error_text += ":"
+
+        for validation_message in validation_messages:
+            error_text += "\n-- " + validation_message
+
+        self.message = error_text
+
+    def __str__(self):
+        return self.message
+
+
 class Field:
     def __init__(
         self,
@@ -226,13 +244,7 @@ class Field:
                     )
 
         if len(validation_messages) > 0:
-            error_text = f"""
-                The following validations failed when attempting 
-                to assign the value '{value}' to field '{self.name}':
-                """.lstrip()
-            for validation_message in validation_messages:
-                error_text += "\n-- " + validation_message
-            raise ValueError(error_text)
+            raise ValidationError(validation_messages, self.name, value)
 
     def __set_name__(self, owner, name):
         self.name = name
