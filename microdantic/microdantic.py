@@ -1,5 +1,5 @@
 __version__ = "0.1.0-rc2"
-
+import json
 
 def xxhash32(data, seed=0):
     """
@@ -329,3 +329,19 @@ class BaseModel:
         """
         instance = cls(**data)
         return instance
+
+    def model_dump_json(self) -> str:
+        """
+        Serialize the model to a JSON string.
+        """
+        return json.dumps(self.model_dump())
+
+    @classmethod
+    def model_validate_json(cls, json_string: str):
+        """
+        Validate a JSON string against the model's fields and return an instance.
+
+        :param json_string: A JSON string of data to validate.
+        :return: An instance of the model class.
+        """
+        return cls.model_validate(json.loads(json_string))
