@@ -12,6 +12,7 @@ microdantic.py to the device. The tests can be run on the host machine by
 running `poetry run tests` inside the project directory.
 """
 
+import json
 import time
 
 from microdantic import Field, BaseModel, Validations
@@ -87,12 +88,13 @@ def test_validations():
     mod.max_len_string = "abcdefghij"
     assert mod.max_len_string == "abcdefghij"
 
+    VALIDATION_ERROR_PREABLE = "The following validations failed"
     print("...error raised on assignment 'mod.required_even_int = 3.0'")
     try:
         mod.even_int = 3.0
     except ValueError as e:
         error_text = e.args[0]
-        assert "Failed the following validations:" in error_text
+        assert VALIDATION_ERROR_PREABLE in error_text
         assert "-- Value must be of type <class 'int'>" in error_text
         assert "-- Value must be even" in error_text
 
@@ -101,7 +103,7 @@ def test_validations():
         mod.even_int = None
     except ValueError as e:
         error_text = e.args[0]
-        assert "Failed the following validations:" in error_text
+        assert VALIDATION_ERROR_PREABLE in error_text
         assert "-- Value must not be None" in error_text
 
     print("...error raised on assignment 'mod.optional_positive_float = -2'")
@@ -109,7 +111,7 @@ def test_validations():
         mod.optional_positive_float = -2
     except ValueError as e:
         error_text = e.args[0]
-        assert "Failed the following validations:" in error_text
+        assert VALIDATION_ERROR_PREABLE in error_text
         assert "-- Value must be of type <class 'float'>" in error_text
         assert "-- Value must be greater than 0" in error_text
 
@@ -118,7 +120,7 @@ def test_validations():
         mod.set_of_values = 4
     except ValueError as e:
         error_text = e.args[0]
-        assert "Failed the following validations:" in error_text
+        assert VALIDATION_ERROR_PREABLE in error_text
         assert "-- Value must be one of" in error_text
 
     print("...error raised on assignment 'mod.max_len_string = 'abcdefghijk'")
@@ -126,8 +128,26 @@ def test_validations():
         mod.max_len_string = "abcdefghijk"
     except ValueError as e:
         error_text = e.args[0]
-        assert "Failed the following validations:" in error_text
+        assert VALIDATION_ERROR_PREABLE in error_text
         assert "-- Value must have length less than 10" in error_text
+
+
+def test_serialization_methods():
+    # Note: The *_jsonb methods call the *_json methods, which call the
+    # base methods. So calling the *_jsonb methods is sufficient to test
+    # all serialization methods.
+
+    print("...model_dump")
+    f = Fruit(name="apple", quantity=5, weight=5.0)
+    jsonb_data = f.model_dump_jsonb()
+    data = json.loads(jsonb_data.decode("utf-8"))
+    assert data == {"name": "apple", "quantity": 5, "weight": 5.0}
+
+    print("...model_validate")
+    ff = Fruit.model_validate_jsonb(jsonb_data)
+    assert ff.name == "apple"
+    assert ff.quantity == 5
+    assert ff.weight == 5.0
 
 
 def run_tests():

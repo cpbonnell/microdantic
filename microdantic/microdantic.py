@@ -1,4 +1,5 @@
-__version__ = "0.1.0-rc2"
+__version__ = "0.1.0-rc3"
+import json
 
 
 def xxhash32(data, seed=0):
@@ -210,25 +211,31 @@ class Field:
 
         # Store our other parameters
         self.data_type = data_type
+        self.name = None
         self.private_name = None
 
     def _assert_all_validations(self, value):
-        error_messages = list()
+        validation_messages = list()
         for validation in self._validations:
             if not validation(value):
                 if hasattr(validation, "custom_error_message"):
-                    error_messages.append(validation.custom_error_message)
+                    validation_messages.append(validation.custom_error_message)
                 else:
-                    error_messages.append(
+                    validation_messages.append(
                         f"Value {value} failed validation {validation}"
                     )
 
-        if len(error_messages) > 0:
-            raise ValueError(
-                "Failed the following validations: \n-- " + "\n-- ".join(error_messages)
+        if len(validation_messages) > 0:
+            error_text = (
+                f"The following validations failed when attempting \n"
+                f"to assign the value '{value}' to field '{self.name}':"
             )
+            for validation_message in validation_messages:
+                error_text += "\n-- " + validation_message
+            raise ValueError(error_text)
 
     def __set_name__(self, owner, name):
+        self.name = name
         self.private_name = f"_{name}"
 
     def __get__(self, instance, owner):
@@ -301,3 +308,57 @@ class BaseModel:
                 value = class_dict[field_name].default
 
             setattr(self, field_name, value)
+
+    def model_dump(self) -> dict:
+        """
+        Serialize the model to a dictionary.
+        """
+        output = dict()
+        for field_name, descriptor in self.__class__.__dict__.items():
+            if isinstance(descriptor, Field):
+                value = getattr(self, field_name)
+                output[field_name] = value
+        return output
+
+    @classmethod
+    def model_validate(cls, data: dict):
+        """
+        Validate a dictionary of data against the model's fields and return an instance.
+
+        :param data: A dictionary of data to validate.
+        :return: An instance of the model class.
+        """
+        instance = cls(**data)
+        return instance
+
+    def model_dump_json(self) -> str:
+        """
+        Serialize the model to a JSON string.
+        """
+        return json.dumps(self.model_dump())
+
+    @classmethod
+    def model_validate_json(cls, json_string: str):
+        """
+        Validate a JSON string against the model's fields and return an instance.
+
+        :param json_string: A JSON string of data to validate.
+        :return: An instance of the model class.
+        """
+        return cls.model_validate(json.loads(json_string))
+
+    def model_dump_jsonb(self) -> bytes:
+        """
+        Serialize the model to a JSON bytes object.
+        """
+        return self.model_dump_json().encode("utf-8") + b"\n"
+
+    @classmethod
+    def model_validate_jsonb(cls, json_bytes: bytes):
+        """
+        Validate a JSON bytes object against the model's fields and return an instance.
+
+        :param json_bytes: A JSON bytes object of data to validate.
+        :return: An instance of the model class.
+        """
+        return cls.model_validate_json(json_bytes.decode("utf-8"))
