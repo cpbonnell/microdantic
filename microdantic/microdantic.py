@@ -113,6 +113,28 @@ class Validations:
         def validate(self, value):
             return value < self.maximum
 
+    class MaxLen(BaseValidator):
+        def __init__(self, max_len):
+            self.max_len = max_len
+
+        @property
+        def custom_error_message(self):
+            return f"Value must have length less than {self.max_len}"
+
+        def validate(self, value):
+            return len(value) <= self.max_len
+
+    class OneOf(BaseValidator):
+        def __init__(self, valid_values):
+            self.valid_values = set(valid_values)
+
+        @property
+        def custom_error_message(self):
+            return f"Value must be one of {self.valid_values}"
+
+        def validate(self, value):
+            return value in self.valid_values
+
     class UserSuppliedLambda(BaseValidator):
         def __init__(self, lambda_function, error_text=None):
             self.lambda_function = lambda_function
@@ -134,9 +156,11 @@ class Field:
         data_type: type,
         default=None,
         validations: None | list[callable] = None,
-        required: bool = False,
+        required: bool = True,
         min_value=None,
         max_value=None,
+        max_len=None,
+        one_of=None,
     ):
         # Check the validations parameter and assign it
         if validations is None:
@@ -167,11 +191,21 @@ class Field:
         if max_value is not None:
             self._validations.append(Validations.LessThan(max_value))
 
+        if max_len is not None:
+            self._validations.append(Validations.MaxLen(max_len))
+
+        if one_of is not None:
+            self._validations.append(Validations.OneOf(one_of))
+
         # Add all other validators
         self._validations.extend(validations)
 
-        # Check the default parameter and assign it
-        self._assert_all_validations(default)
+        # Note: We do, in fact, want to assert all validations against
+        # the default value if one is supplied. But if no default
+        # value is supplied, then we don't want to enforce the NotNull
+        # constraint until the owner class is instantiated.
+        if default is not None:
+            self._assert_all_validations(default)
         self.default = default
 
         # Store our other parameters
@@ -258,5 +292,12 @@ class BaseModel:
         cls.__field_names__ = tuple(sorted(all_field_names))
 
     def __init__(self, **kwargs):
-        for field_name, value in kwargs.items():
+        class_dict = self.__class__.__dict__
+
+        for field_name in self.__field_names__:
+            if field_name in kwargs:
+                value = kwargs[field_name]
+            else:
+                value = class_dict[field_name].default
+
             setattr(self, field_name, value)

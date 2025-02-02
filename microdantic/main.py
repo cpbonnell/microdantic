@@ -23,18 +23,19 @@ class Fruit(BaseModel):
     weight: float = 1.0
 
 
-Fruit.register_class()
-
 is_even = Validations.UserSuppliedLambda(lambda x: x % 2 == 0, "Value must be even")
 
 
 class ModelWithValidations(BaseModel):
-    required_even_int = Field(int, default=0, required=True, validations=[is_even])
+    even_int = Field(int, default=0, validations=[is_even])
     optional_positive_float = Field(
-        float, default=1.0, validations=[Validations.GreaterThan(0)]
+        float, default=1.0, required=False, validations=[Validations.GreaterThan(0)]
     )
+    set_of_values = Field(int, default=1, validations=[Validations.OneOf([1, 2, 3])])
+    max_len_string = Field(str, default="abc", validations=[Validations.MaxLen(10)])
 
 
+Fruit.register_class()
 ModelWithValidations.register_class()
 
 
@@ -61,10 +62,10 @@ def test_validations():
     mod = ModelWithValidations()
 
     print("...valid assignments to required_even_int")
-    mod.required_even_int = 2
-    assert mod.required_even_int == 2
-    mod.required_even_int = -4
-    assert mod.required_even_int == -4
+    mod.even_int = 2
+    assert mod.even_int == 2
+    mod.even_int = -4
+    assert mod.even_int == -4
 
     print("...valid assignments to optional_positive_float")
     mod.optional_positive_float = 3.5
@@ -74,9 +75,21 @@ def test_validations():
     mod.optional_positive_float = None
     assert mod.optional_positive_float is None
 
+    print("...valid assignments to required_even_int")
+    mod.set_of_values = 3
+    assert mod.set_of_values == 3
+    mod.set_of_values = 2
+    assert mod.set_of_values == 2
+
+    print("...valid assignments to max_len_string")
+    mod.max_len_string = "a"
+    assert mod.max_len_string == "a"
+    mod.max_len_string = "abcdefghij"
+    assert mod.max_len_string == "abcdefghij"
+
     print("...error raised on assignment 'mod.required_even_int = 3.0'")
     try:
-        mod.required_even_int = 3.0
+        mod.even_int = 3.0
     except ValueError as e:
         error_text = e.args[0]
         assert "Failed the following validations:" in error_text
@@ -85,7 +98,7 @@ def test_validations():
 
     print("...error raised on assignment 'mod.required_even_int = None'")
     try:
-        mod.required_even_int = None
+        mod.even_int = None
     except ValueError as e:
         error_text = e.args[0]
         assert "Failed the following validations:" in error_text
@@ -100,6 +113,22 @@ def test_validations():
         assert "-- Value must be of type <class 'float'>" in error_text
         assert "-- Value must be greater than 0" in error_text
 
+    print("...error raised on assignment 'mod.set_of_values = 4'")
+    try:
+        mod.set_of_values = 4
+    except ValueError as e:
+        error_text = e.args[0]
+        assert "Failed the following validations:" in error_text
+        assert "-- Value must be one of" in error_text
+
+    print("...error raised on assignment 'mod.max_len_string = 'abcdefghijk'")
+    try:
+        mod.max_len_string = "abcdefghijk"
+    except ValueError as e:
+        error_text = e.args[0]
+        assert "Failed the following validations:" in error_text
+        assert "-- Value must have length less than 10" in error_text
+
 
 def run_tests():
     print("==================== Beginning Test Suite ====================")
@@ -107,6 +136,7 @@ def run_tests():
         name: obj for name, obj in globals().items() if name.startswith("test_")
     }
 
+    total_test_time = 0
     for name, executable in tests_to_run.items():
         if not callable(executable):
             print(f"Symbol {name} is not callable. Skipping execution.")
@@ -116,7 +146,11 @@ def run_tests():
         executable()
         end = time.monotonic()
 
+        total_test_time += end - start
         print(f"...test runtime was {(end-start)*1000:.3f} ms")
+
+    print("==================== Test Suite Complete ====================")
+    print(f"Total test time: {total_test_time:.3f} seconds")
 
 
 if __name__ == "__main__":
