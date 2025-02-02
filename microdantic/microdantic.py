@@ -317,7 +317,14 @@ class BaseModel:
         for field_name, descriptor in self.__class__.__dict__.items():
             if isinstance(descriptor, Field):
                 value = getattr(self, field_name)
-                output[field_name] = value
+
+                # If the value is itself something that can be dumped, then
+                # recursively call its model_dump method to get the serialized value.
+                if isinstance(value, BaseModel):
+                    output[field_name] = value.model_dump()
+                else:
+                    output[field_name] = value
+
         return output
 
     @classmethod
