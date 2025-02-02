@@ -298,6 +298,10 @@ class BaseModel:
         #       here, but for now we just store the order of the fields.
         cls.__field_names__ = tuple(sorted(all_field_names))
 
+    @classmethod
+    def get_field_descriptor(cls, field_name):
+        return cls.__dict__[field_name]
+
     def __init__(self, **kwargs):
         class_dict = self.__class__.__dict__
 
