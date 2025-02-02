@@ -12,6 +12,8 @@ microdantic.py to the device. The tests can be run on the host machine by
 running `poetry run tests` inside the project directory.
 """
 
+import time
+
 from microdantic import Field, BaseModel, Validations
 
 
@@ -22,6 +24,18 @@ class Fruit(BaseModel):
 
 
 Fruit.register_class()
+
+is_even = Validations.UserSuppliedLambda(lambda x: x % 2 == 0, "Value must be even")
+
+
+class ModelWithValidations(BaseModel):
+    required_even_int = Field(int, default=0, required=True, validations=[is_even])
+    optional_positive_float = Field(
+        float, default=1.0, validations=[Validations.GreaterThan(0)]
+    )
+
+
+ModelWithValidations.register_class()
 
 
 def test_construction_and_default_values():
@@ -42,15 +56,6 @@ def test_construction_and_default_values():
 
 
 def test_validations():
-    is_even = Validations.UserSuppliedLambda(lambda x: x % 2 == 0, "Value must be even")
-
-    class ModelWithValidations(BaseModel):
-        required_even_int = Field(int, default=0, required=True, validations=[is_even])
-        optional_positive_float = Field(
-            float, default=1.0, validations=[Validations.GreaterThan(0)]
-        )
-
-    ModelWithValidations.register_class()
 
     # Assign some values that should pass validation
     mod = ModelWithValidations()
@@ -107,7 +112,11 @@ def run_tests():
             print(f"Symbol {name} is not callable. Skipping execution.")
 
         print(f"===== Running {name} =====")
+        start = time.monotonic()
         executable()
+        end = time.monotonic()
+
+        print(f"...test runtime was {(end-start)*1000:.3f} ms")
 
 
 if __name__ == "__main__":
