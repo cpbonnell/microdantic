@@ -339,6 +339,14 @@ class BaseModel:
         :param data: A dictionary of data to validate.
         :return: An instance of the model class.
         """
+
+        # If we get nested BaseModel objects, we need to recursively validate them
+        # before constructing the instance.
+        for field_name in cls.__field_names__:
+            descriptor = cls.get_field_descriptor(field_name)
+            if field_name in data and issubclass(descriptor.data_type, BaseModel):
+                data[field_name] = descriptor.data_type.model_validate(data[field_name])
+
         instance = cls(**data)
         return instance
 
