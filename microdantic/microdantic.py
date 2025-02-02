@@ -1,4 +1,4 @@
-__version__ = "0.1.0-rc4"
+__version__ = "0.1.0-rc5"
 import json
 
 
@@ -317,6 +317,13 @@ class BaseModel:
                 value = self.get_field_descriptor(field_name).default
 
             setattr(self, field_name, value)
+
+    def __repr__(self):
+        field_values = ", ".join(
+            f"{field_name}={repr(getattr(self, field_name))}"
+            for field_name in self.__field_names__
+        )
+        return f"{self.__class__.__name__}({field_values})"
 
     def model_dump(self) -> dict:
         """

@@ -133,6 +133,17 @@ def test_validations():
         assert "-- Value must have length less than 10" in error_text
 
 
+def test_repr():
+    print("...repr")
+    fa = Fruit(name="apple", quantity=5, weight=5.0)
+    fb = Fruit(name="banana", quantity=10, weight=1.0)
+    assert repr(fa) == "Fruit(name='apple', quantity=5, weight=5.0)"
+    assert repr(fb) == "Fruit(name='banana', quantity=10, weight=1.0)"
+
+    fs = FruitSalad(ingredient_1=fa, ingredient_2=fb)
+    assert repr(fs) == f"FruitSalad(ingredient_1={repr(fa)}, ingredient_2={repr(fb)})"
+
+
 def test_serialization_methods():
     # Note: The *_jsonb methods call the *_json methods, which call the
     # base methods. So calling the *_jsonb methods is sufficient to test
