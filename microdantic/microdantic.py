@@ -113,6 +113,17 @@ class Validations:
         def validate(self, value):
             return value < self.maximum
 
+    class MaxLen(BaseValidator):
+        def __init__(self, max_len):
+            self.max_len = max_len
+
+        @property
+        def custom_error_message(self):
+            return f"Value must have length less than {self.max_len}"
+
+        def validate(self, value):
+            return len(value) < self.max_len
+
     class UserSuppliedLambda(BaseValidator):
         def __init__(self, lambda_function, error_text=None):
             self.lambda_function = lambda_function
@@ -137,6 +148,7 @@ class Field:
         required: bool = False,
         min_value=None,
         max_value=None,
+        max_len=None,
     ):
         # Check the validations parameter and assign it
         if validations is None:
@@ -166,6 +178,9 @@ class Field:
 
         if max_value is not None:
             self._validations.append(Validations.LessThan(max_value))
+
+        if max_len is not None:
+            self._validations.append(Validations.MaxLen(max_len))
 
         # Add all other validators
         self._validations.extend(validations)
