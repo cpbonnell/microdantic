@@ -303,13 +303,11 @@ class BaseModel:
         return cls.__dict__[field_name]
 
     def __init__(self, **kwargs):
-        class_dict = self.__class__.__dict__
-
         for field_name in self.__field_names__:
             if field_name in kwargs:
                 value = kwargs[field_name]
             else:
-                value = class_dict[field_name].default
+                value = self.get_field_descriptor(field_name).default
 
             setattr(self, field_name, value)
 
@@ -318,7 +316,9 @@ class BaseModel:
         Serialize the model to a dictionary.
         """
         output = dict()
-        for field_name, descriptor in self.__class__.__dict__.items():
+        for field_name in self.__field_names__:
+            descriptor = self.get_field_descriptor(field_name)
+
             if isinstance(descriptor, Field):
                 value = getattr(self, field_name)
 
