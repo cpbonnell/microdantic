@@ -1,11 +1,11 @@
-__version__ = "0.1.0-rc1"
+__version__ = "0.1.0-rc2"
 
 
 def xxhash32(data, seed=0):
     """
     Optimized xxHash implementation for MicroPython.
 
-    Seee reference implementation on GitHub:
+    See reference implementation on GitHub:
     https://github.com/Cyan4973/xxHash
     """
 
@@ -58,17 +58,141 @@ def xxhash32(data, seed=0):
     return h32
 
 
+class Validations:
+    class BaseValidator:
+
+        def validate(self, value):
+            raise NotImplementedError
+
+        @property
+        def custom_error_message(self):
+            return f"Value failed validation {self}"
+
+        def __call__(self, value):
+            return value is None or self.validate(value)
+
+    class NotNull(BaseValidator):
+        def __call__(self, value):
+            """Overrides parent class method"""
+            return value is not None
+
+        @property
+        def custom_error_message(self):
+            return "Value must not be None"
+
+    class IsType(BaseValidator):
+        def __init__(self, data_type):
+            self.data_type = data_type
+
+        @property
+        def custom_error_message(self):
+            return f"Value must be of type {self.data_type}"
+
+        def validate(self, value):
+            return isinstance(value, self.data_type)
+
+    class GreaterThan(BaseValidator):
+        def __init__(self, minimum):
+            self.minimum = minimum
+
+        @property
+        def custom_error_message(self):
+            return f"Value must be greater than {self.minimum}"
+
+        def validate(self, value):
+            return value > self.minimum
+
+    class LessThan(BaseValidator):
+        def __init__(self, maximum):
+            self.maximum = maximum
+
+        @property
+        def custom_error_message(self):
+            return f"Value must be less than {self.maximum}"
+
+        def validate(self, value):
+            return value < self.maximum
+
+    class UserSuppliedLambda(BaseValidator):
+        def __init__(self, lambda_function, error_text=None):
+            self.lambda_function = lambda_function
+            self.error_text = error_text
+
+        @property
+        def custom_error_message(self):
+            if self.error_text:
+                return self.error_text
+            return f"Value must pass the user-supplied lambda function"
+
+        def validate(self, value):
+            return self.lambda_function(value)
+
+
 class Field:
     def __init__(
         self,
         data_type: type,
         default=None,
+        validations: None | list[callable] = None,
+        required: bool = False,
+        min_value=None,
+        max_value=None,
     ):
+        # Check the validations parameter and assign it
+        if validations is None:
+            validations = list()
+        elif isinstance(validations, list):
+            assert all(callable(v) for v in validations)
+            validations = [
+                (
+                    v
+                    if isinstance(v, Validations.BaseValidator)
+                    else Validations.UserSuppliedLambda(v)
+                )
+                for v in validations
+            ]
+        else:
+            raise ValueError("Validations must be a list of callables or None")
+
+        # Validators from the base parameters
+        self._validations = list()
+        self._validations.append(Validations.IsType(data_type))
+
+        if required:
+            self._validations.append(Validations.NotNull())
+
+        if min_value is not None:
+            self._validations.append(Validations.GreaterThan(min_value))
+
+        if max_value is not None:
+            self._validations.append(Validations.LessThan(max_value))
+
+        # Add all other validators
+        self._validations.extend(validations)
+
+        # Check the default parameter and assign it
+        self._assert_all_validations(default)
         self.default = default
 
         # Store our other parameters
         self.data_type = data_type
         self.private_name = None
+
+    def _assert_all_validations(self, value):
+        error_messages = list()
+        for validation in self._validations:
+            if not validation(value):
+                if hasattr(validation, "custom_error_message"):
+                    error_messages.append(validation.custom_error_message)
+                else:
+                    error_messages.append(
+                        f"Value {value} failed validation {validation}"
+                    )
+
+        if len(error_messages) > 0:
+            raise ValueError(
+                "Failed the following validations: \n-- " + "\n-- ".join(error_messages)
+            )
 
     def __set_name__(self, owner, name):
         self.private_name = f"_{name}"
@@ -83,6 +207,7 @@ class Field:
         return getattr(instance, self.private_name)
 
     def __set__(self, instance, value):
+        self._assert_all_validations(value)
         setattr(instance, self.private_name, value)
 
     def __repr__(self):
