@@ -122,7 +122,18 @@ class Validations:
             return f"Value must have length less than {self.max_len}"
 
         def validate(self, value):
-            return len(value) < self.max_len
+            return len(value) <= self.max_len
+
+    class OneOf(BaseValidator):
+        def __init__(self, valid_values):
+            self.valid_values = set(valid_values)
+
+        @property
+        def custom_error_message(self):
+            return f"Value must be one of {self.valid_values}"
+
+        def validate(self, value):
+            return value in self.valid_values
 
     class UserSuppliedLambda(BaseValidator):
         def __init__(self, lambda_function, error_text=None):
@@ -149,6 +160,7 @@ class Field:
         min_value=None,
         max_value=None,
         max_len=None,
+        one_of=None,
     ):
         # Check the validations parameter and assign it
         if validations is None:
@@ -181,6 +193,9 @@ class Field:
 
         if max_len is not None:
             self._validations.append(Validations.MaxLen(max_len))
+
+        if one_of is not None:
+            self._validations.append(Validations.OneOf(one_of))
 
         # Add all other validators
         self._validations.extend(validations)
