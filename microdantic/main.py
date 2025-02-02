@@ -12,6 +12,7 @@ microdantic.py to the device. The tests can be run on the host machine by
 running `poetry run tests` inside the project directory.
 """
 
+import json
 import time
 
 from microdantic import Field, BaseModel, Validations
@@ -129,6 +130,24 @@ def test_validations():
         error_text = e.args[0]
         assert VALIDATION_ERROR_PREABLE in error_text
         assert "-- Value must have length less than 10" in error_text
+
+
+def test_serialization_methods():
+    # Note: The *_jsonb methods call the *_json methods, which call the
+    # base methods. So calling the *_jsonb methods is sufficient to test
+    # all serialization methods.
+
+    print("...model_dump")
+    f = Fruit(name="apple", quantity=5, weight=5.0)
+    jsonb_data = f.model_dump_jsonb()
+    data = json.loads(jsonb_data.decode("utf-8"))
+    assert data == {"name": "apple", "quantity": 5, "weight": 5.0}
+
+    print("...model_validate")
+    ff = Fruit.model_validate_jsonb(jsonb_data)
+    assert ff.name == "apple"
+    assert ff.quantity == 5
+    assert ff.weight == 5.0
 
 
 def run_tests():
