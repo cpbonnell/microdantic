@@ -1,4 +1,4 @@
-__version__ = "0.1.0-rc3"
+__version__ = "0.1.0-rc4"
 import json
 
 
@@ -226,10 +226,10 @@ class Field:
                     )
 
         if len(validation_messages) > 0:
-            error_text = (
-                f"The following validations failed when attempting \n"
-                f"to assign the value '{value}' to field '{self.name}':"
-            )
+            error_text = f"""
+                The following validations failed when attempting 
+                to assign the value '{value}' to field '{self.name}':
+                """.lstrip()
             for validation_message in validation_messages:
                 error_text += "\n-- " + validation_message
             raise ValueError(error_text)
@@ -298,14 +298,23 @@ class BaseModel:
         #       here, but for now we just store the order of the fields.
         cls.__field_names__ = tuple(sorted(all_field_names))
 
+    @classmethod
+    def get_field_descriptor(cls, field_name):
+        return cls.__dict__[field_name]
+
     def __init__(self, **kwargs):
-        class_dict = self.__class__.__dict__
+        # Check if this class has been registered yet, and if not
+        # register it now.
+        try:
+            self.__field_names__
+        except AttributeError:
+            self.register_class()
 
         for field_name in self.__field_names__:
             if field_name in kwargs:
                 value = kwargs[field_name]
             else:
-                value = class_dict[field_name].default
+                value = self.get_field_descriptor(field_name).default
 
             setattr(self, field_name, value)
 
@@ -314,10 +323,19 @@ class BaseModel:
         Serialize the model to a dictionary.
         """
         output = dict()
-        for field_name, descriptor in self.__class__.__dict__.items():
+        for field_name in self.__field_names__:
+            descriptor = self.get_field_descriptor(field_name)
+
             if isinstance(descriptor, Field):
                 value = getattr(self, field_name)
-                output[field_name] = value
+
+                # If the value is itself something that can be dumped, then
+                # recursively call its model_dump method to get the serialized value.
+                if isinstance(value, BaseModel):
+                    output[field_name] = value.model_dump()
+                else:
+                    output[field_name] = value
+
         return output
 
     @classmethod
@@ -328,6 +346,14 @@ class BaseModel:
         :param data: A dictionary of data to validate.
         :return: An instance of the model class.
         """
+
+        # If we get nested BaseModel objects, we need to recursively validate them
+        # before constructing the instance.
+        for field_name in cls.__field_names__:
+            descriptor = cls.get_field_descriptor(field_name)
+            if field_name in data and issubclass(descriptor.data_type, BaseModel):
+                data[field_name] = descriptor.data_type.model_validate(data[field_name])
+
         instance = cls(**data)
         return instance
 
