@@ -41,11 +41,6 @@ class ModelWithValidations(BaseModel):
     max_len_string = Field(str, default="abc", validations=[Validations.MaxLen(10)])
 
 
-Fruit.register_class()
-FruitSalad.register_class()
-ModelWithValidations.register_class()
-
-
 def test_construction_and_default_values():
     print("...default apple")
     default_apple = Fruit(name="apple")

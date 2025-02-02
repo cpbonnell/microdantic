@@ -303,6 +303,13 @@ class BaseModel:
         return cls.__dict__[field_name]
 
     def __init__(self, **kwargs):
+        # Check if this class has been registered yet, and if not
+        # register it now.
+        try:
+            self.__field_names__
+        except AttributeError:
+            self.register_class()
+
         for field_name in self.__field_names__:
             if field_name in kwargs:
                 value = kwargs[field_name]
