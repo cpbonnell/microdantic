@@ -2,63 +2,6 @@ __version__ = "0.1.0-rc6"
 import json
 
 
-def xxhash32(data, seed=0):
-    """
-    Optimized xxHash implementation for MicroPython.
-
-    See reference implementation on GitHub:
-    https://github.com/Cyan4973/xxHash
-    """
-
-    PRIME1 = 2654435761
-    PRIME2 = 2246822519
-    PRIME3 = 3266489917
-    PRIME4 = 668265263
-    PRIME5 = 374761393
-
-    def rotl32(x, r):
-        """Rotate left (circular shift) for 32-bit values."""
-        return ((x << r) & 0xFFFFFFFF) | (x >> (32 - r))
-
-    length = len(data)
-    h32 = (seed + PRIME5 + length) & 0xFFFFFFFF  # Base hash initialization
-
-    # Process 4-byte chunks
-    i = 0
-    while i + 4 <= length:
-        k1 = (
-            data[i] | (data[i + 1] << 8) | (data[i + 2] << 16) | (data[i + 3] << 24)
-        ) & 0xFFFFFFFF
-        k1 = (k1 * PRIME3) & 0xFFFFFFFF
-        k1 = rotl32(k1, 17)
-        k1 = (k1 * PRIME4) & 0xFFFFFFFF
-        h32 ^= k1
-        h32 = rotl32(h32, 19)
-        h32 = (h32 * PRIME1 + PRIME4) & 0xFFFFFFFF
-        i += 4
-
-    # Process remaining 1-3 bytes
-    if i < length:
-        if length - i == 3:
-            h32 ^= data[i + 2] << 16
-        if length - i >= 2:
-            h32 ^= data[i + 1] << 8
-        if length - i >= 1:
-            h32 ^= data[i]
-            h32 = (h32 * PRIME5) & 0xFFFFFFFF
-            h32 = rotl32(h32, 11)
-            h32 = (h32 * PRIME1) & 0xFFFFFFFF
-
-    # Final mix
-    h32 ^= h32 >> 15
-    h32 = (h32 * PRIME2) & 0xFFFFFFFF
-    h32 ^= h32 >> 13
-    h32 = (h32 * PRIME3) & 0xFFFFFFFF
-    h32 ^= h32 >> 16
-
-    return h32
-
-
 class Validations:
     class BaseValidator:
 
@@ -169,6 +112,17 @@ class ValidationError(Exception):
         return self.message
 
 
+# TODO: Add a custom Union class that can be used in the Field class to
+#       specify multiple valid types for a field. MicroPython does not
+#       support the typing module, so we have to implement this ourselves.
+
+# TODO: Use the Union class to implement the "discriminated union" feature
+#       from Pydantic. This will allow us to have a field that can be one of
+#       several different types, and the type is determined by the value of
+#       another field in the model. This will also require implementation of
+#       Literal and Enum classes to support the feature.
+
+
 class Field:
     def __init__(
         self,
@@ -272,19 +226,39 @@ class BaseModel:
     @classmethod
     def register_class(cls):
         """
-        Call this method immediately after defining a new child class.
+        Conduct various class setup tasks for the class.
 
-        This is necessary because MicroPython does not support metaclasses, and
-        so any custom behavior needs to be in a function that is invoked
-        explicitly. MicroPython also does not (yet) do all of the normal magic
-        around class definition, so we have to do some of the work ourselves.
+        The method will automatically be invoked the first time an instance
+        of the class is created, but it can also be called explicitly if
+        you want to ensure that the class is set up before any instances
+        are created (for example if the first instance is created in a
+        time sensitive event loop).
+
+        This is necessary because MicroPython does not support metaclasses,
+        and so any custom class definition behavior needs to be in a function
+        that is invoked explicitly. MicroPython also does not (yet) do all the
+        normal magic around class definition, so we have to do some of the work
+        ourselves.
+
+        This method is idempotent, so it can be called multiple times without
+        causing any issues (unless you are doing fancy metaprogramming of your
+        own that is messing with Microdantic's internals).
         """
 
         # Look over the class dictionary and create Field objects for any
         # attributes that are not already Fields.
         # NOTE: Some iterations of MicroPython (like Circuit Python) do not
         # have the __annotations__ attribute, so we have to use __dict__
-        # instead, and infer the type from the value supplied as a default.
+        # instead. This means that we have to infer the data type from the
+        # value supplied as a default, rather than from the fields annotated
+        # type. This has the side effect of not being able to use the
+        # "shorthand syntax" to define fields without a default value (even
+        # though such declarations are common in Pydantic). And since we have
+        # don't have access to the type annotations, it means that the user
+        # could define a field with a default value that is not of the same
+        # type as the annotation, and we will still infer that the filed is the
+        # same type as the default value, rather than the type of the
+        # annotation.
         new_fields = dict()
         for name, field in cls.__dict__.items():
             if not name.startswith("_") and not isinstance(field, Field):
