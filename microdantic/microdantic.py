@@ -168,10 +168,6 @@ class ValidationError(Exception):
         return self.message
 
 
-# TODO: Add a custom Union class that can be used in the Field class to
-#       specify multiple valid types for a field. MicroPython does not
-#       support the typing module, so we have to implement this ourselves.
-
 # TODO: Use the Union class to implement the "discriminated union" feature
 #       from Pydantic. This will allow us to have a field that can be one of
 #       several different types, and the type is determined by the value of
