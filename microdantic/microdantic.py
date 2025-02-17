@@ -60,7 +60,23 @@ class _Union(_SpecialType):
         return any(issubclass(subclass, t) for t in self._allowed_types)
 
 
+class _Literal(_SpecialType):
+    def __init__(self, *parameters):
+        self._allowed_values = parameters
+
+    @classmethod
+    def from_square_brackets(cls, param_tuple: tuple):
+        return cls(*param_tuple)
+
+    def instancecheck(self, instance):
+        return instance in self._allowed_values
+
+    def subclasscheck(self, subclass):
+        return subclass in self._allowed_values
+
+
 Union = _SpecialTypeFactory(_Union)
+Literal = _SpecialTypeFactory(_Literal)
 
 
 class Validations:
