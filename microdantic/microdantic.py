@@ -39,6 +39,30 @@ class _SpecialTypeFactory:
         return self._special_type_class.from_square_brackets(params)
 
 
+class _Union(_SpecialType):
+
+    def __init__(self, *parameters):
+
+        for p in parameters:
+            if not isinstance(p, type):
+                raise ValueError(f"{p} is not a type, it is a {type(p)}.")
+
+        self._allowed_types = parameters
+
+    @staticmethod
+    def from_square_brackets(param_tuple: tuple):
+        return _Union(*param_tuple)
+
+    def instancecheck(self, instance):
+        return any(isinstance(instance, t) for t in self._allowed_types)
+
+    def subclasscheck(self, subclass):
+        return any(issubclass(subclass, t) for t in self._allowed_types)
+
+
+Union = _SpecialTypeFactory(_Union)
+
+
 class Validations:
     class BaseValidator:
 
