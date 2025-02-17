@@ -15,7 +15,7 @@ running `poetry run tests` inside the project directory.
 import json
 import time
 
-from microdantic import Field, BaseModel, Validations, ValidationError, Union
+from microdantic import Field, BaseModel, Validations, ValidationError, Union, Literal
 
 
 class Fruit(BaseModel):
@@ -188,6 +188,13 @@ def test_special_types():
     assert u.subclasscheck(int)
     assert u.subclasscheck(float)
     assert not u.subclasscheck(str)
+
+    print("...Literal")
+    l = Literal["apple", "banana"]
+
+    assert l.instancecheck("apple")
+    assert l.instancecheck("banana")
+    assert not l.instancecheck("orange")
 
 
 def run_tests():
