@@ -15,7 +15,7 @@ running `poetry run tests` inside the project directory.
 import json
 import time
 
-from microdantic import Field, BaseModel, Validations, ValidationError
+from microdantic import Field, BaseModel, Validations, ValidationError, Union
 
 
 class Fruit(BaseModel):
@@ -173,6 +173,21 @@ def test_recursive_serialization():
     assert isinstance(fs2.ingredient_2, Fruit)
     assert fs2.ingredient_1.name == "apple"
     assert fs2.ingredient_2.name == "banana"
+
+
+def test_special_types():
+
+    print("...Union")
+    u = Union[int, float]
+
+    assert u.instancecheck(3)
+    assert u.instancecheck(3.0)
+    assert not u.instancecheck("3")
+    assert not u.instancecheck(None)
+
+    assert u.subclasscheck(int)
+    assert u.subclasscheck(float)
+    assert not u.subclasscheck(str)
 
 
 def run_tests():
