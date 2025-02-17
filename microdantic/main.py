@@ -193,6 +193,52 @@ def test_special_types():
     assert not l.instancecheck("orange")
 
 
+def test_special_type_fields():
+    u = Union[int, float]
+    l = Literal["apple", "banana"]
+
+    print("... special types in field with initial values")
+
+    class ModelWithSpecialTypes(BaseModel):
+        union_field = Field(u)
+        literal_field = Field(l)
+
+    m = ModelWithSpecialTypes(union_field=3, literal_field="apple")
+    assert m.union_field == 3
+    assert m.literal_field == "apple"
+
+    print("...special types in field with default values")
+
+    class ModelWithDefaultUnion(BaseModel):
+        union_field = Field(u, default=3)
+        literal_field = Field(l, default="banana")
+
+    m = ModelWithDefaultUnion()
+    assert m.union_field == 3
+
+    print("...Error when assigning invalid value to Union field")
+    incorrect_union_error_raised = False
+    try:
+        m.union_field = "3"
+    except ValidationError as e:
+        error_text = str(e)
+        assert "-- Value must be of type" in error_text
+        incorrect_union_error_raised = True
+
+    assert incorrect_union_error_raised
+
+    print("...Error when assigning invalid value to Literal field")
+    incorrect_literal_error_raised = False
+    try:
+        m.literal_field = "orange"
+    except ValidationError as e:
+        error_text = str(e)
+        assert "-- Value must be of type" in error_text
+        incorrect_literal_error_raised = True
+
+    assert incorrect_literal_error_raised
+
+
 def run_tests():
     print("==================== Beginning Test Suite ====================")
     tests_to_run = {
