@@ -2,6 +2,80 @@ __version__ = "0.1.0-rc7"
 import json
 
 
+class _SpecialType:
+    """
+    A base class for special types in Microdantic.
+    """
+
+    # These two methods are required because as of right now I cannot successfully
+    # override __instancecheck__ and __subclasscheck__ in a way that works in MicroPython.
+    def instancecheck(self, instance):
+        raise NotImplementedError()
+
+    @staticmethod
+    def from_square_brackets(param_tuple: tuple):
+        """
+        Construct an instance of the special type from a tuple of parameters.
+
+        This is used for constructing instances of special types from the _SpecialTypeFacotory
+        using square bracket syntax, such as `Union[int, float]`.
+        """
+        raise NotImplementedError()
+
+
+class _SpecialTypeFactory:
+
+    def __init__(self, special_type_class):
+        assert issubclass(
+            special_type_class, _SpecialType
+        ), "Special type class must be a subclass of _SpecialType"
+
+        self._special_type_class = special_type_class
+
+    def __getitem__(self, params):
+        return self._special_type_class.from_square_brackets(params)
+
+
+class _Union(_SpecialType):
+
+    def __init__(self, *parameters):
+
+        for p in parameters:
+            if not isinstance(p, type):
+                raise ValueError(f"{p} is not a type, it is a {type(p)}.")
+
+        self._allowed_types = parameters
+
+    @staticmethod
+    def from_square_brackets(param_tuple: tuple):
+        return _Union(*param_tuple)
+
+    def instancecheck(self, instance):
+        return any(isinstance(instance, t) for t in self._allowed_types)
+
+    def __repr__(self):
+        return f"Union[{', '.join([t.__name__ for t in self._allowed_types])}]"
+
+
+class _Literal(_SpecialType):
+    def __init__(self, *parameters):
+        self._allowed_values = parameters
+
+    @classmethod
+    def from_square_brackets(cls, param_tuple: tuple):
+        return cls(*param_tuple)
+
+    def instancecheck(self, instance):
+        return instance in self._allowed_values
+
+    def __repr__(self):
+        return f"Literal[{', '.join([repr(v) for v in self._allowed_values])}]"
+
+
+Union = _SpecialTypeFactory(_Union)
+Literal = _SpecialTypeFactory(_Literal)
+
+
 class Validations:
     class BaseValidator:
 
@@ -39,10 +113,15 @@ class Validations:
             return "Value must not be None"
 
     class IsType(Validator):
-        def __init__(self, data_type):
-            super().__init__(
-                lambda x: isinstance(x, data_type), f"Value must be of type {data_type}"
-            )
+        def __init__(self, data_type: type | _SpecialType):
+            if isinstance(data_type, _SpecialType):
+                checker = lambda x: data_type.instancecheck(x)
+            elif isinstance(data_type, type):
+                checker = lambda x: isinstance(x, data_type)
+            else:
+                raise TypeError(f"Invalid type: {data_type}")
+
+            super().__init__(checker, f"Value must be of type {data_type}")
 
     class GreaterThan(Validator):
         def __init__(self, minimum):
@@ -103,7 +182,7 @@ class ValidationError(Exception):
 class Field:
     def __init__(
         self,
-        data_type: type,
+        data_type: type | _SpecialType,
         default=None,
         validations: None | list[callable] = None,
         required: bool = True,
