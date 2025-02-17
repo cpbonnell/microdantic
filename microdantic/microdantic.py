@@ -12,9 +12,6 @@ class _SpecialType:
     def instancecheck(self, instance):
         raise NotImplementedError()
 
-    def subclasscheck(self, subclass):
-        raise NotImplementedError()
-
     @staticmethod
     def from_square_brackets(param_tuple: tuple):
         """
@@ -56,9 +53,6 @@ class _Union(_SpecialType):
     def instancecheck(self, instance):
         return any(isinstance(instance, t) for t in self._allowed_types)
 
-    def subclasscheck(self, subclass):
-        return any(issubclass(subclass, t) for t in self._allowed_types)
-
 
 class _Literal(_SpecialType):
     def __init__(self, *parameters):
@@ -70,9 +64,6 @@ class _Literal(_SpecialType):
 
     def instancecheck(self, instance):
         return instance in self._allowed_values
-
-    def subclasscheck(self, subclass):
-        return subclass in self._allowed_values
 
 
 Union = _SpecialTypeFactory(_Union)

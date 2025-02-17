@@ -185,10 +185,6 @@ def test_special_types():
     assert not u.instancecheck("3")
     assert not u.instancecheck(None)
 
-    assert u.subclasscheck(int)
-    assert u.subclasscheck(float)
-    assert not u.subclasscheck(str)
-
     print("...Literal")
     l = Literal["apple", "banana"]
 
