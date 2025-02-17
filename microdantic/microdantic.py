@@ -107,10 +107,15 @@ class Validations:
             return "Value must not be None"
 
     class IsType(Validator):
-        def __init__(self, data_type):
-            super().__init__(
-                lambda x: isinstance(x, data_type), f"Value must be of type {data_type}"
-            )
+        def __init__(self, data_type: type | _SpecialType):
+            if isinstance(data_type, _SpecialType):
+                checker = lambda x: data_type.instancecheck(x)
+            elif isinstance(data_type, type):
+                checker = lambda x: isinstance(x, data_type)
+            else:
+                raise TypeError(f"Invalid type: {data_type}")
+
+            super().__init__(checker, f"Value must be of type {data_type}")
 
     class GreaterThan(Validator):
         def __init__(self, minimum):
@@ -171,7 +176,7 @@ class ValidationError(Exception):
 class Field:
     def __init__(
         self,
-        data_type: type,
+        data_type: type | _SpecialType,
         default=None,
         validations: None | list[callable] = None,
         required: bool = True,
