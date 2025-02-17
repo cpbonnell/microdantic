@@ -2,6 +2,43 @@ __version__ = "0.1.0-rc7"
 import json
 
 
+class _SpecialType:
+    """
+    A base class for special types in Microdantic.
+    """
+
+    # These two methods are required because as of right now I cannot successfully
+    # override __instancecheck__ and __subclasscheck__ in a way that works in MicroPython.
+    def instancecheck(self, instance):
+        raise NotImplementedError()
+
+    def subclasscheck(self, subclass):
+        raise NotImplementedError()
+
+    @staticmethod
+    def from_square_brackets(param_tuple: tuple):
+        """
+        Construct an instance of the special type from a tuple of parameters.
+
+        This is used for constructing instances of special types from the _SpecialTypeFacotory
+        using square bracket syntax, such as `Union[int, float]`.
+        """
+        raise NotImplementedError()
+
+
+class _SpecialTypeFactory:
+
+    def __init__(self, special_type_class):
+        assert issubclass(
+            special_type_class, _SpecialType
+        ), "Special type class must be a subclass of _SpecialType"
+
+        self._special_type_class = special_type_class
+
+    def __getitem__(self, params):
+        return self._special_type_class.from_square_brackets(params)
+
+
 class Validations:
     class BaseValidator:
 
