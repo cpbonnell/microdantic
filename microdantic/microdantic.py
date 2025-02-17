@@ -53,6 +53,9 @@ class _Union(_SpecialType):
     def instancecheck(self, instance):
         return any(isinstance(instance, t) for t in self._allowed_types)
 
+    def __repr__(self):
+        return f"Union[{', '.join([t.__name__ for t in self._allowed_types])}]"
+
 
 class _Literal(_SpecialType):
     def __init__(self, *parameters):
@@ -64,6 +67,9 @@ class _Literal(_SpecialType):
 
     def instancecheck(self, instance):
         return instance in self._allowed_values
+
+    def __repr__(self):
+        return f"Literal[{', '.join([repr(v) for v in self._allowed_values])}]"
 
 
 Union = _SpecialTypeFactory(_Union)

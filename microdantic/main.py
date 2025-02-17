@@ -222,7 +222,7 @@ def test_special_type_fields():
         m.union_field = "3"
     except ValidationError as e:
         error_text = str(e)
-        assert "-- Value must be of type" in error_text
+        assert "-- Value must be of type Union[" in error_text
         incorrect_union_error_raised = True
 
     assert incorrect_union_error_raised
@@ -233,7 +233,7 @@ def test_special_type_fields():
         m.literal_field = "orange"
     except ValidationError as e:
         error_text = str(e)
-        assert "-- Value must be of type" in error_text
+        assert "-- Value must be of type Literal[" in error_text
         incorrect_literal_error_raised = True
 
     assert incorrect_literal_error_raised
