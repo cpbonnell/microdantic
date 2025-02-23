@@ -1,8 +1,9 @@
 from microdantic.microdantic import (
-    Field,
     BaseModel,
-    Validations,
-    ValidationError,
-    Union,
+    Field,
     Literal,
+    Union,
+    ValidationError,
+    Validations,
+    register,
 )

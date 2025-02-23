@@ -15,7 +15,15 @@ running `poetry run tests` inside the project directory.
 import json
 import time
 
-from microdantic import Field, BaseModel, Validations, ValidationError, Union, Literal
+from microdantic import (
+    BaseModel,
+    Field,
+    Literal,
+    Union,
+    ValidationError,
+    Validations,
+    register,
+)
 
 
 class Fruit(BaseModel):
@@ -237,6 +245,21 @@ def test_special_type_fields():
         incorrect_literal_error_raised = True
 
     assert incorrect_literal_error_raised
+
+    print("...Error when defining a literal field with invalid default value")
+    invalid_default_literal_error_raised = False
+    try:
+
+        @register
+        class ModelWithInvalidLiteralDefault(BaseModel):
+            literal_field = Field(l, default="orange")
+
+    except ValidationError as e:
+        error_text = str(e)
+        assert "-- Value must be of type Literal[" in error_text
+        invalid_default_literal_error_raised = True
+
+    assert invalid_default_literal_error_raised
 
 
 def run_tests():

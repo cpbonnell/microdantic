@@ -168,10 +168,6 @@ class ValidationError(Exception):
         return self.message
 
 
-# TODO: Add a custom Union class that can be used in the Field class to
-#       specify multiple valid types for a field. MicroPython does not
-#       support the typing module, so we have to implement this ourselves.
-
 # TODO: Use the Union class to implement the "discriminated union" feature
 #       from Pydantic. This will allow us to have a field that can be one of
 #       several different types, and the type is determined by the value of
@@ -229,12 +225,9 @@ class Field:
         # Add all other validators
         self._validations.extend(validations)
 
-        # Note: We do, in fact, want to assert all validations against
-        # the default value if one is supplied. But if no default
-        # value is supplied, then we don't want to enforce the NotNull
-        # constraint until the owner class is instantiated.
-        if default is not None:
-            self._assert_all_validations(default)
+        # Note: We defer validation of the default value until the __set_name__
+        # method is called during class registration, since we don't have access
+        # to the field name until that point.
         self.default = default
 
         # Store our other parameters
@@ -259,6 +252,14 @@ class Field:
     def __set_name__(self, owner, name):
         self.name = name
         self.private_name = f"_{name}"
+
+        # Note: We do, in fact, want to assert all validations against
+        # the default value if one is supplied. But if no default
+        # value is supplied, then we don't want to enforce the NotNull
+        # constraint until the owner class is instantiated, since this
+        # might just be a required field that is not set by default.
+        if self.default is not None:
+            self._assert_all_validations(self.default)
 
     def __get__(self, instance, owner):
         if instance is None:
@@ -437,3 +438,14 @@ class BaseModel:
         :return: An instance of the model class.
         """
         return cls.model_validate_json(json_bytes.decode("utf-8"))
+
+
+def register(class_obj):
+    """A decorator to call the register_class method of a class inheriting BaseModel"""
+    if not issubclass(class_obj, BaseModel):
+        raise TypeError(
+            "The register decorator can only be used on classes that inherit from BaseModel"
+        )
+
+    class_obj.register_class()
+    return class_obj
