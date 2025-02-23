@@ -437,3 +437,14 @@ class BaseModel:
         :return: An instance of the model class.
         """
         return cls.model_validate_json(json_bytes.decode("utf-8"))
+
+
+def register(class_obj):
+    """A decorator to call the register_class method of a class inheriting BaseModel"""
+    if not issubclass(class_obj, BaseModel):
+        raise TypeError(
+            "The register decorator can only be used on classes that inherit from BaseModel"
+        )
+
+    class_obj.register_class()
+    return class_obj
