@@ -225,9 +225,8 @@ class Field:
         # Add all other validators
         self._validations.extend(validations)
 
-        # Note: We defer validation of the default value until the __set_name__
-        # method is called during class registration, since we don't have access
-        # to the field name until that point.
+        # Note: We defer validation of the default value until class registration,
+        # since we don't have access to the field name until that point.
         self.default = default
 
         # Store our other parameters
@@ -252,14 +251,6 @@ class Field:
     def __set_name__(self, owner, name):
         self.name = name
         self.private_name = f"_{name}"
-
-        # Note: We do, in fact, want to assert all validations against
-        # the default value if one is supplied. But if no default
-        # value is supplied, then we don't want to enforce the NotNull
-        # constraint until the owner class is instantiated, since this
-        # might just be a required field that is not set by default.
-        if self.default is not None:
-            self._assert_all_validations(self.default)
 
     def __get__(self, instance, owner):
         if instance is None:
@@ -332,6 +323,18 @@ class BaseModel:
         for name, field in cls.__dict__.items():
             if isinstance(field, Field):
                 field.__set_name__(cls, name)
+
+                # Note: We do, in fact, want to assert all validations against
+                # the default value if one is supplied. But if no default
+                # value is supplied, then we don't want to enforce the NotNull
+                # constraint until the owner class is instantiated, since this
+                # might just be a required field that is not set by default.
+                if field.default is not None:
+                    # noinspection PyProtectedMember
+                    field._assert_all_validations(
+                        field.default
+                    )  # pylint: disable=protected-access
+
                 all_field_names.append(name)
 
         # Reliably automating the struct packing process requires a
