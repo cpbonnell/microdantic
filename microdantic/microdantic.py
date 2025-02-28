@@ -278,6 +278,7 @@ class Field:
 class BaseModel:
 
     __registered_child_classes__ = dict()
+    __auto_serialize_class_name__ = True
 
     @classmethod
     def register_class(cls):
@@ -396,6 +397,9 @@ class BaseModel:
                     output[field_name] = value.model_dump()
                 else:
                     output[field_name] = value
+
+        if self.__auto_serialize_class_name__:
+            output["__base_model_class_name__"] = self.__class__.__name__
 
         return output
 
