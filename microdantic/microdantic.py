@@ -295,8 +295,7 @@ class BaseModel:
         ourselves.
 
         This method is idempotent, so it can be called multiple times without
-        causing any issues (unless you are doing fancy metaprogramming of your
-        own that is messing with Microdantic's internals).
+        causing any issues.
         """
 
         # Look over the class dictionary and create Field objects for any
@@ -304,7 +303,7 @@ class BaseModel:
         # NOTE: Some iterations of MicroPython (like Circuit Python) do not
         # have the __annotations__ attribute, so we have to use __dict__
         # instead. This means that we have to infer the data type from the
-        # value supplied as a default, rather than from the fields annotated
+        # value supplied as a default, rather than from the field's annotated
         # type. This has the side effect of not being able to use the
         # "shorthand syntax" to define fields without a default value (even
         # though such declarations are common in Pydantic). And since we have
@@ -346,8 +345,6 @@ class BaseModel:
         # Reliably automating the struct packing process requires a
         # consistent ordering of the fields, so we determine a fixed
         # order here and store it in the class.
-        # TODO: In the future we might construct a struct format string
-        #       here, but for now we just store the order of the fields.
         cls.__field_names__ = tuple(sorted(all_field_names))
 
     @classmethod
