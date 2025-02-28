@@ -277,6 +277,8 @@ class Field:
 
 class BaseModel:
 
+    __registered_child_classes__ = dict()
+
     @classmethod
     def register_class(cls):
         """
@@ -346,6 +348,9 @@ class BaseModel:
         # consistent ordering of the fields, so we determine a fixed
         # order here and store it in the class.
         cls.__field_names__ = tuple(sorted(all_field_names))
+
+        # Register the child class with BaseModel
+        BaseModel.__registered_child_classes__[cls.__name__] = cls
 
     @classmethod
     def get_field_descriptor(cls, field_name):
