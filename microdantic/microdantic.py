@@ -7,6 +7,9 @@ class _SpecialType:
     A base class for special types in Microdantic.
     """
 
+    def __init__(self, *args):
+        pass
+
     # These two methods are required because as of right now I cannot successfully
     # override __instancecheck__ and __subclasscheck__ in a way that works in MicroPython.
     def instancecheck(self, instance):
@@ -33,12 +36,14 @@ class _SpecialTypeFactory:
         self._special_type_class = special_type_class
 
     def __getitem__(self, params):
-        return self._special_type_class.from_square_brackets(params)
+        to_pass = params if isinstance(params, tuple) else (params,)
+        return self._special_type_class(*to_pass)
 
 
 class _Union(_SpecialType):
 
     def __init__(self, *parameters):
+        super().__init__(*parameters)
 
         for p in parameters:
             if not isinstance(p, type):
@@ -59,6 +64,7 @@ class _Union(_SpecialType):
 
 class _Literal(_SpecialType):
     def __init__(self, *parameters):
+        super().__init__(*parameters)
         self._allowed_values = parameters
 
     @classmethod
