@@ -27,12 +27,14 @@ from microdantic import (
 
 
 class Fruit(BaseModel):
+    __auto_serialize_class_name__ = False
     name: str = Field(str)
     quantity = 10
     weight: float = 1.0
 
 
 class FruitSalad(BaseModel):
+    __auto_serialize_class_name__ = False
     ingredient_1 = Field(Fruit)
     ingredient_2 = Field(Fruit)
 
@@ -41,6 +43,7 @@ is_even = Validations.Validator(lambda x: x % 2 == 0, "Value must be even")
 
 
 class ModelWithValidations(BaseModel):
+    __auto_serialize_class_name__ = False
     even_int = Field(int, default=0, validations=[is_even])
     optional_positive_float = Field(
         float, default=1.0, required=False, validations=[Validations.GreaterThan(0)]
