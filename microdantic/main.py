@@ -210,6 +210,8 @@ def test_special_type_fields():
     class ModelWithSpecialTypes(BaseModel):
         union_field = Field(u)
         literal_field = Field(l)
+        string_literal_with_default_field = Field(Literal["apple"], default="apple")
+        int_literal_with_default_value = Field(Literal[1], default=1)
 
     m = ModelWithSpecialTypes(union_field=3, literal_field="apple")
     assert m.union_field == 3
