@@ -357,6 +357,11 @@ class BaseModel:
     def get_field_descriptor(cls, field_name):
         return cls.__dict__[field_name]
 
+    @classmethod
+    def iter_fields(cls):
+        for field_name in cls.__field_names__:
+            yield field_name, cls.get_field_descriptor(field_name)
+
     def __init__(self, **kwargs):
         # Check if this class has been registered yet, and if not
         # register it now.
@@ -385,8 +390,7 @@ class BaseModel:
         Serialize the model to a dictionary.
         """
         output = dict()
-        for field_name in self.__field_names__:
-            descriptor = self.get_field_descriptor(field_name)
+        for field_name, descriptor in self.iter_fields():
 
             if isinstance(descriptor, Field):
                 value = getattr(self, field_name)
@@ -414,8 +418,7 @@ class BaseModel:
 
         # If we get nested BaseModel objects, we need to recursively validate them
         # before constructing the instance.
-        for field_name in cls.__field_names__:
-            descriptor = cls.get_field_descriptor(field_name)
+        for field_name, descriptor in cls.iter_fields():
             if field_name in data and issubclass(descriptor.data_type, BaseModel):
                 data[field_name] = descriptor.data_type.model_validate(data[field_name])
 
