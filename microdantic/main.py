@@ -26,6 +26,8 @@ from microdantic import (
 )
 
 
+# ========== Overhead Code Used in Tests ==========
+@register
 class Fruit(BaseModel):
     __auto_serialize_class_name__ = False
     name: str = Field(str)
@@ -33,6 +35,7 @@ class Fruit(BaseModel):
     weight: float = 1.0
 
 
+@register
 class FruitSalad(BaseModel):
     __auto_serialize_class_name__ = False
     ingredient_1 = Field(Fruit)
@@ -42,6 +45,7 @@ class FruitSalad(BaseModel):
 is_even = Validations.Validator(lambda x: x % 2 == 0, "Value must be even")
 
 
+@register
 class ModelWithValidations(BaseModel):
     __auto_serialize_class_name__ = False
     even_int = Field(int, default=0, validations=[is_even])
@@ -52,6 +56,25 @@ class ModelWithValidations(BaseModel):
     max_len_string = Field(str, default="abc", validations=[Validations.MaxLen(10)])
 
 
+u = Union[int, float]
+l = Literal["apple", "banana"]
+
+
+@register
+class ModelWithSpecialTypes(BaseModel):
+    union_field = Field(u)
+    literal_field = Field(l)
+    string_literal_with_default_field = Field(Literal["apple"], default="apple")
+    int_literal_with_default_value = Field(Literal[1], default=1)
+
+
+@register
+class ModelWithDefaultSpecialTypes(BaseModel):
+    union_field = Field(u, default=3)
+    literal_field = Field(l, default="banana")
+
+
+# ========== Test Functions ==========
 def test_construction_and_default_values():
     print("...default apple")
     default_apple = Fruit(name="apple")
@@ -189,32 +212,19 @@ def test_recursive_serialization():
 def test_special_types():
 
     print("...Union")
-    u = Union[int, float]
-
     assert u.instancecheck(3)
     assert u.instancecheck(3.0)
     assert not u.instancecheck("3")
     assert not u.instancecheck(None)
 
     print("...Literal")
-    l = Literal["apple", "banana"]
-
     assert l.instancecheck("apple")
     assert l.instancecheck("banana")
     assert not l.instancecheck("orange")
 
 
 def test_special_type_fields():
-    u = Union[int, float]
-    l = Literal["apple", "banana"]
-
     print("... special types in field with initial values")
-
-    class ModelWithSpecialTypes(BaseModel):
-        union_field = Field(u)
-        literal_field = Field(l)
-        string_literal_with_default_field = Field(Literal["apple"], default="apple")
-        int_literal_with_default_value = Field(Literal[1], default=1)
 
     m = ModelWithSpecialTypes(union_field=3, literal_field="apple")
     assert m.union_field == 3
@@ -222,11 +232,7 @@ def test_special_type_fields():
 
     print("...special types in field with default values")
 
-    class ModelWithDefaultUnion(BaseModel):
-        union_field = Field(u, default=3)
-        literal_field = Field(l, default="banana")
-
-    m = ModelWithDefaultUnion()
+    m = ModelWithDefaultSpecialTypes()
     assert m.union_field == 3
 
     print("...Error when assigning invalid value to Union field")
