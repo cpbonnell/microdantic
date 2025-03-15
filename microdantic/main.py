@@ -74,6 +74,21 @@ class ModelWithDefaultSpecialTypes(BaseModel):
     literal_field = Field(l, default="banana")
 
 
+@register
+class NestedModelA(BaseModel):
+    internal_key = Field(str, default="A")
+
+
+@register
+class NestedModelB(BaseModel):
+    internal_key = Field(str, default="A")
+
+
+@register
+class ModelWithNestedUnion(BaseModel):
+    nested_model = Field(Union[NestedModelA, NestedModelB])
+
+
 # ========== Test Functions ==========
 def test_construction_and_default_values():
     print("...default apple")
@@ -273,6 +288,25 @@ def test_special_type_fields():
     assert invalid_default_literal_error_raised
 
 
+def test_nested_union():
+
+    print("...Instantiate nested union")
+    ma = ModelWithNestedUnion(nested_model=NestedModelA())
+    mb = ModelWithNestedUnion(nested_model=NestedModelB())
+
+    print("...Serialize nested union")
+    ma_serialized = ma.model_dump()
+    mb_serialized = mb.model_dump()
+
+    print("...Deserialize nested union")
+    ma_deserialized = ModelWithNestedUnion.model_validate(ma_serialized)
+    mb_deserialized = ModelWithNestedUnion.model_validate(mb_serialized)
+
+    assert isinstance(ma_deserialized.nested_model, NestedModelA)
+    assert isinstance(mb_deserialized.nested_model, NestedModelB)
+
+
+# ========== Test Execution ==========
 def run_tests():
     print("==================== Beginning Test Suite ====================")
     tests_to_run = {
