@@ -190,6 +190,7 @@ class Field:
         self,
         data_type: type | _SpecialType,
         default=None,
+        *,
         validations: None | list[callable] = None,
         required: bool = True,
         min_value=None,
