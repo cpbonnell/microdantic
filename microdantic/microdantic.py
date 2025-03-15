@@ -51,6 +51,10 @@ class _Union(_SpecialType):
 
         self._allowed_types = parameters
 
+    @property
+    def allowed_types(self):
+        return tuple(c for c in self._allowed_types)
+
     @staticmethod
     def from_square_brackets(param_tuple: tuple):
         return _Union(*param_tuple)
@@ -274,6 +278,38 @@ class Field:
     def __repr__(self):
         return f"{self.__class__.__name__}({self.data_type})"
 
+    def parse_dict(self, data: dict):
+        """
+        Parse a dictionary and return an element that is suitable for assignment to the field.
+
+        :param data: A dict, typically from a nested JSON object.
+        """
+        if self.data_type == dict:
+            return data
+
+        elif isinstance(self.data_type, type) and issubclass(self.data_type, BaseModel):
+            return self.data_type.model_validate(data)
+
+        elif isinstance(self.data_type, _Union):
+            # Iterate through the allowed types until we find one that matches the dict's signature
+            if "__base_model_class_name__" in data:
+                class_name_signature = data["__base_model_class_name__"]
+            else:
+                return None
+
+            for allowed_type in self.data_type.allowed_types:
+                if (
+                    isinstance(allowed_type, type)
+                    and issubclass(allowed_type, BaseModel)
+                    and allowed_type.__name__ == class_name_signature
+                ):
+                    return allowed_type.model_validate(data)
+
+        else:
+            raise ValueError(f"Cannot parse dict for field of type {self.data_type}")
+
+        return None
+
 
 class BaseModel:
 
@@ -419,8 +455,21 @@ class BaseModel:
         # If we get nested BaseModel objects, we need to recursively validate them
         # before constructing the instance.
         for field_name, descriptor in cls.iter_fields():
-            if field_name in data and issubclass(descriptor.data_type, BaseModel):
-                data[field_name] = descriptor.data_type.model_validate(data[field_name])
+            relevant_data = data.get(field_name)
+
+            if isinstance(relevant_data, list):
+                raise ValueError("Nested list fields are not yet supported.")
+
+            elif isinstance(relevant_data, dict):
+                # If the field is a nested dict, we delegate parsing to the field descriptor
+                # which will determine how to recursively call model_validate based on the
+                # correct class
+                data[field_name] = descriptor.parse_dict(relevant_data)
+
+            else:
+                # If the field is a simple type, we just naively pass it along to
+                # the constructor
+                pass
 
         instance = cls(**data)
         return instance
