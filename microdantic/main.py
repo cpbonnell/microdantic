@@ -26,13 +26,18 @@ from microdantic import (
 )
 
 
+# ========== Overhead Code Used in Tests ==========
+@register
 class Fruit(BaseModel):
+    __auto_serialize_class_name__ = False
     name: str = Field(str)
     quantity = 10
     weight: float = 1.0
 
 
+@register
 class FruitSalad(BaseModel):
+    __auto_serialize_class_name__ = False
     ingredient_1 = Field(Fruit)
     ingredient_2 = Field(Fruit)
 
@@ -40,7 +45,9 @@ class FruitSalad(BaseModel):
 is_even = Validations.Validator(lambda x: x % 2 == 0, "Value must be even")
 
 
+@register
 class ModelWithValidations(BaseModel):
+    __auto_serialize_class_name__ = False
     even_int = Field(int, default=0, validations=[is_even])
     optional_positive_float = Field(
         float, default=1.0, required=False, validations=[Validations.GreaterThan(0)]
@@ -49,6 +56,40 @@ class ModelWithValidations(BaseModel):
     max_len_string = Field(str, default="abc", validations=[Validations.MaxLen(10)])
 
 
+u = Union[int, float]
+l = Literal["apple", "banana"]
+
+
+@register
+class ModelWithSpecialTypes(BaseModel):
+    union_field = Field(u)
+    literal_field = Field(l)
+    string_literal_with_default_field = Field(Literal["apple"], default="apple")
+    int_literal_with_default_value = Field(Literal[1], default=1)
+
+
+@register
+class ModelWithDefaultSpecialTypes(BaseModel):
+    union_field = Field(u, default=3)
+    literal_field = Field(l, default="banana")
+
+
+@register
+class NestedModelA(BaseModel):
+    internal_key = Field(str, default="A")
+
+
+@register
+class NestedModelB(BaseModel):
+    internal_key = Field(str, default="A")
+
+
+@register
+class ModelWithNestedUnion(BaseModel):
+    nested_model = Field(Union[NestedModelA, NestedModelB])
+
+
+# ========== Test Functions ==========
 def test_construction_and_default_values():
     print("...default apple")
     default_apple = Fruit(name="apple")
@@ -186,32 +227,19 @@ def test_recursive_serialization():
 def test_special_types():
 
     print("...Union")
-    u = Union[int, float]
-
     assert u.instancecheck(3)
     assert u.instancecheck(3.0)
     assert not u.instancecheck("3")
     assert not u.instancecheck(None)
 
     print("...Literal")
-    l = Literal["apple", "banana"]
-
     assert l.instancecheck("apple")
     assert l.instancecheck("banana")
     assert not l.instancecheck("orange")
 
 
 def test_special_type_fields():
-    u = Union[int, float]
-    l = Literal["apple", "banana"]
-
     print("... special types in field with initial values")
-
-    class ModelWithSpecialTypes(BaseModel):
-        union_field = Field(u)
-        literal_field = Field(l)
-        string_literal_with_default_field = Field(Literal["apple"], default="apple")
-        int_literal_with_default_value = Field(Literal[1], default=1)
 
     m = ModelWithSpecialTypes(union_field=3, literal_field="apple")
     assert m.union_field == 3
@@ -219,11 +247,7 @@ def test_special_type_fields():
 
     print("...special types in field with default values")
 
-    class ModelWithDefaultUnion(BaseModel):
-        union_field = Field(u, default=3)
-        literal_field = Field(l, default="banana")
-
-    m = ModelWithDefaultUnion()
+    m = ModelWithDefaultSpecialTypes()
     assert m.union_field == 3
 
     print("...Error when assigning invalid value to Union field")
@@ -264,6 +288,25 @@ def test_special_type_fields():
     assert invalid_default_literal_error_raised
 
 
+def test_nested_union():
+
+    print("...Instantiate nested union")
+    ma = ModelWithNestedUnion(nested_model=NestedModelA())
+    mb = ModelWithNestedUnion(nested_model=NestedModelB())
+
+    print("...Serialize nested union")
+    ma_serialized = ma.model_dump()
+    mb_serialized = mb.model_dump()
+
+    print("...Deserialize nested union")
+    ma_deserialized = ModelWithNestedUnion.model_validate(ma_serialized)
+    mb_deserialized = ModelWithNestedUnion.model_validate(mb_serialized)
+
+    assert isinstance(ma_deserialized.nested_model, NestedModelA)
+    assert isinstance(mb_deserialized.nested_model, NestedModelB)
+
+
+# ========== Test Execution ==========
 def run_tests():
     print("==================== Beginning Test Suite ====================")
     tests_to_run = {

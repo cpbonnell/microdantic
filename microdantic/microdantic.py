@@ -51,6 +51,10 @@ class _Union(_SpecialType):
 
         self._allowed_types = parameters
 
+    @property
+    def allowed_types(self):
+        return tuple(c for c in self._allowed_types)
+
     @staticmethod
     def from_square_brackets(param_tuple: tuple):
         return _Union(*param_tuple)
@@ -274,8 +278,43 @@ class Field:
     def __repr__(self):
         return f"{self.__class__.__name__}({self.data_type})"
 
+    def parse_dict(self, data: dict):
+        """
+        Parse a dictionary and return an element that is suitable for assignment to the field.
+
+        :param data: A dict, typically from a nested JSON object.
+        """
+        if self.data_type == dict:
+            return data
+
+        elif isinstance(self.data_type, type) and issubclass(self.data_type, BaseModel):
+            return self.data_type.model_validate(data)
+
+        elif isinstance(self.data_type, _Union):
+            # Iterate through the allowed types until we find one that matches the dict's signature
+            if "__base_model_class_name__" in data:
+                class_name_signature = data["__base_model_class_name__"]
+            else:
+                return None
+
+            for allowed_type in self.data_type.allowed_types:
+                if (
+                    isinstance(allowed_type, type)
+                    and issubclass(allowed_type, BaseModel)
+                    and allowed_type.__name__ == class_name_signature
+                ):
+                    return allowed_type.model_validate(data)
+
+        else:
+            raise ValueError(f"Cannot parse dict for field of type {self.data_type}")
+
+        return None
+
 
 class BaseModel:
+
+    __registered_child_classes__ = dict()
+    __auto_serialize_class_name__ = True
 
     @classmethod
     def register_class(cls):
@@ -295,8 +334,7 @@ class BaseModel:
         ourselves.
 
         This method is idempotent, so it can be called multiple times without
-        causing any issues (unless you are doing fancy metaprogramming of your
-        own that is messing with Microdantic's internals).
+        causing any issues.
         """
 
         # Look over the class dictionary and create Field objects for any
@@ -304,7 +342,7 @@ class BaseModel:
         # NOTE: Some iterations of MicroPython (like Circuit Python) do not
         # have the __annotations__ attribute, so we have to use __dict__
         # instead. This means that we have to infer the data type from the
-        # value supplied as a default, rather than from the fields annotated
+        # value supplied as a default, rather than from the field's annotated
         # type. This has the side effect of not being able to use the
         # "shorthand syntax" to define fields without a default value (even
         # though such declarations are common in Pydantic). And since we have
@@ -346,13 +384,19 @@ class BaseModel:
         # Reliably automating the struct packing process requires a
         # consistent ordering of the fields, so we determine a fixed
         # order here and store it in the class.
-        # TODO: In the future we might construct a struct format string
-        #       here, but for now we just store the order of the fields.
         cls.__field_names__ = tuple(sorted(all_field_names))
+
+        # Register the child class with BaseModel
+        BaseModel.__registered_child_classes__[cls.__name__] = cls
 
     @classmethod
     def get_field_descriptor(cls, field_name):
         return cls.__dict__[field_name]
+
+    @classmethod
+    def iter_fields(cls):
+        for field_name in cls.__field_names__:
+            yield field_name, cls.get_field_descriptor(field_name)
 
     def __init__(self, **kwargs):
         # Check if this class has been registered yet, and if not
@@ -382,8 +426,7 @@ class BaseModel:
         Serialize the model to a dictionary.
         """
         output = dict()
-        for field_name in self.__field_names__:
-            descriptor = self.get_field_descriptor(field_name)
+        for field_name, descriptor in self.iter_fields():
 
             if isinstance(descriptor, Field):
                 value = getattr(self, field_name)
@@ -394,6 +437,9 @@ class BaseModel:
                     output[field_name] = value.model_dump()
                 else:
                     output[field_name] = value
+
+        if self.__auto_serialize_class_name__:
+            output["__base_model_class_name__"] = self.__class__.__name__
 
         return output
 
@@ -408,10 +454,22 @@ class BaseModel:
 
         # If we get nested BaseModel objects, we need to recursively validate them
         # before constructing the instance.
-        for field_name in cls.__field_names__:
-            descriptor = cls.get_field_descriptor(field_name)
-            if field_name in data and issubclass(descriptor.data_type, BaseModel):
-                data[field_name] = descriptor.data_type.model_validate(data[field_name])
+        for field_name, descriptor in cls.iter_fields():
+            relevant_data = data.get(field_name)
+
+            if isinstance(relevant_data, list):
+                raise ValueError("Nested list fields are not yet supported.")
+
+            elif isinstance(relevant_data, dict):
+                # If the field is a nested dict, we delegate parsing to the field descriptor
+                # which will determine how to recursively call model_validate based on the
+                # correct class
+                data[field_name] = descriptor.parse_dict(relevant_data)
+
+            else:
+                # If the field is a simple type, we just naively pass it along to
+                # the constructor
+                pass
 
         instance = cls(**data)
         return instance
