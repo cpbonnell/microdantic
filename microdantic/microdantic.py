@@ -274,6 +274,18 @@ class Field:
         self.name = name
         self.private_name = f"_{name}"
 
+        # Check to see if we can make this a discriminated union with extra info from the owner class
+        # (that is, if the field is a Union that is not already discriminated, and the owner class has a
+        # __base_model_class_name__ attribute). This is a bit of a hack, but it's the best way I can think
+        # of to do this without a metaclass
+        if (
+            isinstance(self.data_type, _Union)
+            and not self.discriminator
+            and hasattr(owner, "__base_model_class_name__")
+            and getattr(owner, "__base_model_class_name__") is True
+        ):
+            self._discriminator = "__base_model_class_name__"
+
     def __get__(self, instance, owner):
         if instance is None:
             return self
