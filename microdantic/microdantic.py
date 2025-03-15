@@ -197,6 +197,7 @@ class Field:
         max_value=None,
         max_len=None,
         one_of=None,
+        discriminator: str = None,
     ):
         # Check the validations parameter and assign it
         if validations is None:
@@ -236,6 +237,12 @@ class Field:
         # Add all other validators
         self._validations.extend(validations)
 
+        # If the field is a discriminated union, do some setup for later convenience
+        if isinstance(data_type, _Union) and discriminator:
+            self._discriminator = discriminator
+        else:
+            self._discriminator = None
+
         # Note: We defer validation of the default value until class registration,
         # since we don't have access to the field name until that point.
         self.default = default
@@ -244,6 +251,10 @@ class Field:
         self.data_type = data_type
         self.name = None
         self.private_name = None
+
+    @property
+    def discriminator(self):
+        return self._discriminator
 
     def _assert_all_validations(self, value):
         validation_messages = list()
