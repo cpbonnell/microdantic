@@ -185,6 +185,29 @@ class ValidationError(Exception):
 #       Literal and Enum classes to support the feature.
 
 
+def is_discriminated_match(
+    discriminator_name: str, discriminator_value: str, candidate_type: type
+) -> bool:
+    # Check to see if the candidate type has a field with the discriminator name
+    if not (hasattr(candidate_type, discriminator_name)):
+        return False
+
+    # Check to see if the field with the discriminator name is a Field descriptor object
+    discriminator_field_descriptor = getattr(candidate_type, discriminator_name)
+    if not isinstance(discriminator_field_descriptor, Field):
+        return False
+
+    # Check to see if the field with the discriminator name is a Literal, and if the value
+    # of the discriminator field matches the discriminator value
+    if not isinstance(discriminator_field_descriptor.data_type, _Literal):
+        return False
+
+    if discriminator_field_descriptor.data_type.instancecheck(discriminator_value):
+        return True
+
+    return False
+
+
 class Field:
     def __init__(
         self,
