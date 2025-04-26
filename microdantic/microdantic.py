@@ -331,13 +331,31 @@ class Field:
 
         :param data: A dict, typically from a nested JSON object.
         """
+
+        # 1. If the dtype of this field is dict, then return the dict unchanged
         if self.data_type == dict:
             return data
 
-        elif isinstance(self.data_type, type) and issubclass(self.data_type, BaseModel):
+        # 2. If the dtype of this field is a BaseModel, then hydrate and return that type
+        if isinstance(self.data_type, type) and issubclass(self.data_type, BaseModel):
             return self.data_type.model_validate(data)
 
-        elif isinstance(self.data_type, _Union):
+        # 3. If the dtype is a discriminated union, look for a matching class that is a BaseModel
+        #    to hydrate and return
+        if (
+            isinstance(self.data_type, _Union)
+            and self.discriminator
+            and self.discriminator in data
+        ):
+            discriminator_value_in_data = data[self.discriminator]
+            for candidate_type in self.data_type.allowed_types:
+                if issubclass(candidate_type, BaseModel) and is_discriminated_match(
+                    self.discriminator, discriminator_value_in_data, candidate_type
+                ):
+                    return candidate_type.model_validate(data)
+
+        # 4. If the dtype is a non-discriminated union, see if the dict has the class name serialized
+        if isinstance(self.data_type, _Union):
             # Iterate through the allowed types until we find one that matches the dict's signature
             if "__base_model_class_name__" in data:
                 class_name_signature = data["__base_model_class_name__"]
@@ -352,8 +370,8 @@ class Field:
                 ):
                     return allowed_type.model_validate(data)
 
-        else:
-            raise ValueError(f"Cannot parse dict for field of type {self.data_type}")
+        # If no possible parse options can be found, raise and let the user sort it out
+        raise ValueError(f"Cannot parse dict for field of type {self.data_type}")
 
         return None
 
