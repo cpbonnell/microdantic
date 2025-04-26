@@ -333,27 +333,14 @@ class Field:
         if isinstance(self.data_type, type) and issubclass(self.data_type, BaseModel):
             return self.data_type.model_validate(data)
 
-        # 3. If the dtype is a discriminated union, look for a matching class that is a BaseModel
-        #    to hydrate and return
+        # 3. If the dtype is a self-discriminated union, see if the dict has the class name serialized
         if (
             isinstance(self.data_type, _Union)
-            and self.discriminator
-            and self.discriminator in data
+            and not self.discriminator
+            and "__base_model_class_name__" in data
         ):
-            discriminator_value_in_data = data[self.discriminator]
-            for candidate_type in self.data_type.allowed_types:
-                if issubclass(candidate_type, BaseModel) and is_discriminated_match(
-                    self.discriminator, discriminator_value_in_data, candidate_type
-                ):
-                    return candidate_type.model_validate(data)
-
-        # 4. If the dtype is a non-discriminated union, see if the dict has the class name serialized
-        if isinstance(self.data_type, _Union):
             # Iterate through the allowed types until we find one that matches the dict's signature
-            if "__base_model_class_name__" in data:
-                class_name_signature = data["__base_model_class_name__"]
-            else:
-                return None
+            class_name_signature = data["__base_model_class_name__"]
 
             for allowed_type in self.data_type.allowed_types:
                 if (
@@ -362,6 +349,24 @@ class Field:
                     and allowed_type.__name__ == class_name_signature
                 ):
                     return allowed_type.model_validate(data)
+
+        # 4. If the dtype is a literal-discriminated union, look for a class that matches the
+        #    discriminator to hydrate and return
+        if (
+            isinstance(self.data_type, _Union)
+            and self.discriminator
+            and self.discriminator in data
+        ):
+            discriminator_value_in_data = data[self.discriminator]
+            for candidate_type in self.data_type.allowed_types:
+                if (
+                    isinstance(candidate_type, type)
+                    and issubclass(candidate_type, BaseModel)
+                    and is_discriminated_match(
+                        self.discriminator, discriminator_value_in_data, candidate_type
+                    )
+                ):
+                    return candidate_type.model_validate(data)
 
         # If no possible parse options can be found, raise and let the user sort it out
         raise ValueError(f"Cannot parse dict for field of type {self.data_type}")
