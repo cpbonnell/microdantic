@@ -51,7 +51,7 @@ the documentation (in order) are:
 
 # Tutorials
 
-## Define your data contract using a model
+## 1. Define your data contract using a model
 
 The magic of Microdantic all starts with the `BaseModel` class. Any class 
 that inherits from `BaseModel` will get all the magic functionality included 
@@ -69,17 +69,66 @@ class Point2D(BaseModel):
     x = 0.0
     y = 0.0
 
+# Any field not specified gets the default value
 origin = Point2D()
 unit_x = Point2D(x=1.0)
 unit_y = Point2D(y=1.0)
+
+# The order of parameters doesn't matter
 point_a = Point2D(x=5.0, y=-2.0)
 point_b = Point2D(y=-2.0, x=5.0)
 
+# Models can be compared
 point_a == point_b  # True
 point_a == origin  # False
+
+# The value of a field can be changed later on
+point_b.y = 10.0
+point_a == point_b  # False
 ```
 
 As you can see, once you define your model by specifying the field names and 
 defaults, you can create instances by specifying the values you want in any 
 order to the constructor. Any values you don't specify will be assigned the 
 default value.
+
+What to read next: 
+* [Tutorial 2: Constraining field values](#-2-constraining-field-values)
+
+## 2. Constraining field values
+Sometimes you may want to restrict the possible values that a field may take.
+For example, say that we wanted to use the `Point2D` model from Tutorial 1, 
+but we wanted to ensure that the point is always in the first quadrant (i.e.
+the values of both `x` and `y` are always positive).
+
+Microdantic provides the class `Field` that we can use when defining our 
+fields. Among other things, the `Field` class allows us to enforce 
+constraints on the data. If anyone tries to assign a value to that field 
+that violates our constraint, then Microdantic will raise an error clearly 
+listing what data constraint the value failed to meet. The following code 
+snippet illustrates this:
+```python
+from microdantic import BaseModel, Field
+
+class Point2D(BaseModel):
+    x = Field(float, default=0.0, ge=0.0)
+    y = Field(float, default=0.0, ge=0.0)
+
+point_a = Point2D()
+
+point_a.x = 3.0  # This will work
+
+point_a.x = -3.0  # This will raise an error
+
+# ValidationError: The following validations failed when attempting to assign 
+# the value '-3.0' to field 'x':
+# -- Value must be greater than 0.0
+```
+
+Since we know that the data contract is enforced at runtime while the data 
+is being constructed, we can write our code safe in the knowledge that if 
+someone else sends us a `Point2d` over the network, then that `Point2D` will 
+be well-behaved and follow the rules we expect it to.
+
+What to read next:
+* [Topic Guide: Field Validations]()
