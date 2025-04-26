@@ -139,6 +139,13 @@ class Validations:
                 lambda x: x > minimum, f"Value must be greater than {minimum}"
             )
 
+    class GreaterThanOrEqual(Validator):
+        def __init__(selfself, minimum):
+            super().__init__(
+                lambda x: x >= minimum,
+                f"Value must be greater than or equal to {minimum}",
+            )
+
     class LessThan(Validator):
         def __init__(self, maximum):
             super().__init__(
@@ -210,6 +217,7 @@ class Field:
         validations: None | list[callable] = None,
         required: bool = True,
         gt=None,
+        ge=None,
         lt=None,
         max_len=None,
         one_of=None,
@@ -240,6 +248,9 @@ class Field:
 
         if gt is not None:
             self._validations.append(Validations.GreaterThan(gt))
+
+        if gt is not None:
+            self._validations.append(Validations.GreaterThanOrEqual(ge))
 
         if lt is not None:
             self._validations.append(Validations.LessThan(lt))
