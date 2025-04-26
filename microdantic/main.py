@@ -331,20 +331,20 @@ def test_nested_union():
 
 
 def test_is_discriminated_match():
-    from microdantic.microdantic import is_discriminated_match
+    from microdantic.microdantic import _is_discriminated_match
 
     print("...Correctly identify matches")
-    assert is_discriminated_match("internal_key", "A", DiscriminatedModelA)
-    assert is_discriminated_match("internal_key", "B", DiscriminatedModelB)
+    assert _is_discriminated_match("internal_key", "A", DiscriminatedModelA)
+    assert _is_discriminated_match("internal_key", "B", DiscriminatedModelB)
 
     print("...Reject match because discriminator value does not match")
-    assert not is_discriminated_match("internal_key", "B", DiscriminatedModelA)
+    assert not _is_discriminated_match("internal_key", "B", DiscriminatedModelA)
 
     print("...Reject match because discriminator field is not present")
-    assert not is_discriminated_match("non_existent_key", "A", DiscriminatedModelA)
+    assert not _is_discriminated_match("non_existent_key", "A", DiscriminatedModelA)
 
     print("...Reject match because the discriminator field is not a literal")
-    assert not is_discriminated_match("payload", "AAA", DiscriminatedModelA)
+    assert not _is_discriminated_match("payload", "AAA", DiscriminatedModelA)
 
 
 def test_discriminated_union():

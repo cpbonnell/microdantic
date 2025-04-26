@@ -12,7 +12,8 @@ class _SpecialType:
 
     # These two methods are required because as of right now I cannot successfully
     # override __instancecheck__ and __subclasscheck__ in a way that works in MicroPython.
-    def instancecheck(self, instance):
+    def instancecheck(self, instance) -> bool:
+        """Determine if an object is part of this special type."""
         raise NotImplementedError()
 
     @staticmethod
@@ -53,6 +54,7 @@ class _Union(_SpecialType):
 
     @property
     def allowed_types(self):
+        """The allowed types that make up this union type."""
         return tuple(c for c in self._allowed_types)
 
     @staticmethod
@@ -87,6 +89,8 @@ Literal = _SpecialTypeFactory(_Literal)
 
 
 class Validations:
+    """A namespace to hold the various validation classes."""
+
     class BaseValidator:
 
         def validate(self, value):
@@ -181,6 +185,13 @@ class Validations:
 
 
 class ValidationError(Exception):
+    """
+    A custom exception class that displays  clear messages when validation fails.
+
+    If the error is raised, it will display a separate line item for each of the validations
+    that failed, making it easier for a user to determine why a given value was rejected for a field.
+    """
+
     def __init__(self, validation_messages: list[str], field_name: str, new_value):
         error_text = "The following validations failed"
 
@@ -198,9 +209,16 @@ class ValidationError(Exception):
         return self.message
 
 
-def is_discriminated_match(
+def _is_discriminated_match(
     discriminator_name: str, discriminator_value: str, candidate_type: type
 ) -> bool:
+    """
+    Determine if the candidate type matches the discriminator signature.
+
+    :param discriminator_name: The name of the discriminator field.
+    :param discriminator_value: The value of the discriminator field in the data being parsed.
+    :param candidate_type: The candidate type being evaluated.
+    """
     # Check to see if the candidate type has a field with the discriminator name
     if not (hasattr(candidate_type, discriminator_name)):
         return False
@@ -410,7 +428,7 @@ class Field:
                 if (
                     isinstance(candidate_type, type)
                     and issubclass(candidate_type, BaseModel)
-                    and is_discriminated_match(
+                    and _is_discriminated_match(
                         self.discriminator, discriminator_value_in_data, candidate_type
                     )
                 ):
