@@ -178,13 +178,6 @@ class ValidationError(Exception):
         return self.message
 
 
-# TODO: Use the Union class to implement the "discriminated union" feature
-#       from Pydantic. This will allow us to have a field that can be one of
-#       several different types, and the type is determined by the value of
-#       another field in the model. This will also require implementation of
-#       Literal and Enum classes to support the feature.
-
-
 def is_discriminated_match(
     discriminator_name: str, discriminator_value: str, candidate_type: type
 ) -> bool:
