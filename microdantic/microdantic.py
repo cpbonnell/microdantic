@@ -178,11 +178,27 @@ class ValidationError(Exception):
         return self.message
 
 
-# TODO: Use the Union class to implement the "discriminated union" feature
-#       from Pydantic. This will allow us to have a field that can be one of
-#       several different types, and the type is determined by the value of
-#       another field in the model. This will also require implementation of
-#       Literal and Enum classes to support the feature.
+def is_discriminated_match(
+    discriminator_name: str, discriminator_value: str, candidate_type: type
+) -> bool:
+    # Check to see if the candidate type has a field with the discriminator name
+    if not (hasattr(candidate_type, discriminator_name)):
+        return False
+
+    # Check to see if the field with the discriminator name is a Field descriptor object
+    discriminator_field_descriptor = getattr(candidate_type, discriminator_name)
+    if not isinstance(discriminator_field_descriptor, Field):
+        return False
+
+    # Check to see if the field with the discriminator name is a Literal, and if the value
+    # of the discriminator field matches the discriminator value
+    if not isinstance(discriminator_field_descriptor.data_type, _Literal):
+        return False
+
+    if discriminator_field_descriptor.data_type.instancecheck(discriminator_value):
+        return True
+
+    return False
 
 
 class Field:
@@ -190,12 +206,14 @@ class Field:
         self,
         data_type: type | _SpecialType,
         default=None,
+        *,
         validations: None | list[callable] = None,
         required: bool = True,
         min_value=None,
         max_value=None,
         max_len=None,
         one_of=None,
+        discriminator: str = None,
     ):
         # Check the validations parameter and assign it
         if validations is None:
@@ -235,6 +253,12 @@ class Field:
         # Add all other validators
         self._validations.extend(validations)
 
+        # If the field is a discriminated union, do some setup for later convenience
+        if isinstance(data_type, _Union) and discriminator:
+            self._discriminator = discriminator
+        else:
+            self._discriminator = None
+
         # Note: We defer validation of the default value until class registration,
         # since we don't have access to the field name until that point.
         self.default = default
@@ -243,6 +267,10 @@ class Field:
         self.data_type = data_type
         self.name = None
         self.private_name = None
+
+    @property
+    def discriminator(self):
+        return self._discriminator
 
     def _assert_all_validations(self, value):
         validation_messages = list()
@@ -261,6 +289,18 @@ class Field:
     def __set_name__(self, owner, name):
         self.name = name
         self.private_name = f"_{name}"
+
+        # Check to see if we can make this a discriminated union with extra info from the owner class
+        # (that is, if the field is a Union that is not already discriminated, and the owner class has a
+        # __base_model_class_name__ attribute). This is a bit of a hack, but it's the best way I can think
+        # of to do this without a metaclass
+        if (
+            isinstance(self.data_type, _Union)
+            and not self.discriminator
+            and hasattr(owner, "__base_model_class_name__")
+            and getattr(owner, "__base_model_class_name__") is True
+        ):
+            self._discriminator = "__base_model_class_name__"
 
     def __get__(self, instance, owner):
         if instance is None:
@@ -284,13 +324,31 @@ class Field:
 
         :param data: A dict, typically from a nested JSON object.
         """
+
+        # 1. If the dtype of this field is dict, then return the dict unchanged
         if self.data_type == dict:
             return data
 
-        elif isinstance(self.data_type, type) and issubclass(self.data_type, BaseModel):
+        # 2. If the dtype of this field is a BaseModel, then hydrate and return that type
+        if isinstance(self.data_type, type) and issubclass(self.data_type, BaseModel):
             return self.data_type.model_validate(data)
 
-        elif isinstance(self.data_type, _Union):
+        # 3. If the dtype is a discriminated union, look for a matching class that is a BaseModel
+        #    to hydrate and return
+        if (
+            isinstance(self.data_type, _Union)
+            and self.discriminator
+            and self.discriminator in data
+        ):
+            discriminator_value_in_data = data[self.discriminator]
+            for candidate_type in self.data_type.allowed_types:
+                if issubclass(candidate_type, BaseModel) and is_discriminated_match(
+                    self.discriminator, discriminator_value_in_data, candidate_type
+                ):
+                    return candidate_type.model_validate(data)
+
+        # 4. If the dtype is a non-discriminated union, see if the dict has the class name serialized
+        if isinstance(self.data_type, _Union):
             # Iterate through the allowed types until we find one that matches the dict's signature
             if "__base_model_class_name__" in data:
                 class_name_signature = data["__base_model_class_name__"]
@@ -305,8 +363,8 @@ class Field:
                 ):
                     return allowed_type.model_validate(data)
 
-        else:
-            raise ValueError(f"Cannot parse dict for field of type {self.data_type}")
+        # If no possible parse options can be found, raise and let the user sort it out
+        raise ValueError(f"Cannot parse dict for field of type {self.data_type}")
 
         return None
 
