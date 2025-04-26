@@ -152,6 +152,12 @@ class Validations:
                 lambda x: x < maximum, f"Value must be less than {maximum}"
             )
 
+    class LessThanOrEqual(Validator):
+        def __init__(self, maximum):
+            super().__init__(
+                lambda x: x <= maximum, f"Value must be less than or equal to {maximum}"
+            )
+
     class MaxLen(Validator):
         def __init__(self, max_len):
             super().__init__(
@@ -219,6 +225,7 @@ class Field:
         gt=None,
         ge=None,
         lt=None,
+        le=None,
         max_len=None,
         one_of=None,
         discriminator: str = None,
@@ -254,6 +261,9 @@ class Field:
 
         if lt is not None:
             self._validations.append(Validations.LessThan(lt))
+
+        if le:
+            self._validations.append(Validations.LessThanOrEqual(le))
 
         if max_len is not None:
             self._validations.append(Validations.MaxLen(max_len))
