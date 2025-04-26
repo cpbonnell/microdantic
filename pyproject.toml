@@ -16,3 +16,8 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 tests = "microdantic.main:run_tests"
+
+[tool.commitizen]
+version_provider = "poetry"
+version_scheme = "pep440"
+version_files = ["microdantic/microdantic.py"]
