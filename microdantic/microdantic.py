@@ -238,6 +238,22 @@ class Field:
         one_of=None,
         discriminator: str = None,
     ):
+        """
+        A descriptor class for defining fields in a BaseModel.
+
+        :param data_type: type. A runtime enforced type annotation.
+        :param default: any. Default value for the field.
+        :param validations: list of callables. A list of user-defined validation functions.
+        :param required: bool. If True, the field is required and cannot be None.
+        :param gt: any. Greater than constraint.
+        :param ge: any. Greater than or equal to constraint.
+        :param lt: any. Less than constraint.
+        :param le: any. Less than or equal to constraint.
+        :param min_length: int. Minimum length constraint.
+        :param max_length: int. Maximum length constraint.
+        :param one_of: list. A list of valid values for the field.
+        :param discriminator: str. The name of the discriminator field for discriminated unions.
+        """
         # Check the validations parameter and assign it
         if validations is None:
             validations = list()
