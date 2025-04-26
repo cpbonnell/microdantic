@@ -76,12 +76,14 @@ class ModelWithDefaultSpecialTypes(BaseModel):
 
 @register
 class NestedModelA(BaseModel):
-    internal_key = Field(str, default="A")
+    internal_key = Field(Literal["A"], default="A")
+    payload = Field(str, default="AAA")
 
 
 @register
 class NestedModelB(BaseModel):
-    internal_key = Field(str, default="A")
+    internal_key = Field(Literal["B"], default="B")
+    payload = Field(str, default="BBB")
 
 
 @register
@@ -304,6 +306,23 @@ def test_nested_union():
 
     assert isinstance(ma_deserialized.nested_model, NestedModelA)
     assert isinstance(mb_deserialized.nested_model, NestedModelB)
+
+
+def test_is_discriminated_match():
+    from microdantic.microdantic import is_discriminated_match
+
+    print("...Correctly identify matches")
+    assert is_discriminated_match("internal_key", "A", NestedModelA)
+    assert is_discriminated_match("internal_key", "B", NestedModelB)
+
+    print("...Reject match because discriminator value does not match")
+    assert not is_discriminated_match("internal_key", "B", NestedModelA)
+
+    print("...Reject match because discriminator field is not present")
+    assert not is_discriminated_match("non_existent_key", "A", NestedModelA)
+
+    print("...Reject match because the discriminator field is not a literal")
+    assert not is_discriminated_match("payload", "AAA", NestedModelA)
 
 
 # ========== Test Execution ==========
