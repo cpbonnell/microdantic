@@ -48,3 +48,38 @@ the documentation (in order) are:
   level, and provide useful information about `microdantic`'s implementation.
 * **Reference Guide** - Complete documentation of all `microdantic`'s classes 
   and functions can be found in the docstrings of those entities.
+
+# Tutorials
+
+## Define your data contract using a model
+
+The magic of Microdantic all starts with the `BaseModel` class. Any class 
+that inherits from `BaseModel` will get all the magic functionality included 
+automatically. Such child classes are generically referred to as **models**. 
+Then you may declare a set of **fields** that belong to that model. For 
+example, let's say that we want a model to represent a point in 
+2-dimensional space, and we want the default value for both components to be 
+"0.0". The following code shows how we might define that model and create 
+several instances of it:
+
+```python
+from microdantic import BaseModel
+
+class Point2D(BaseModel):
+    x = 0.0
+    y = 0.0
+
+origin = Point2D()
+unit_x = Point2D(x=1.0)
+unit_y = Point2D(y=1.0)
+point_a = Point2D(x=5.0, y=-2.0)
+point_b = Point2D(y=-2.0, x=5.0)
+
+point_a == point_b  # True
+point_a == origin  # False
+```
+
+As you can see, once you define your model by specifying the field names and 
+defaults, you can create instances by specifying the values you want in any 
+order to the constructor. Any values you don't specify will be assigned the 
+default value.
