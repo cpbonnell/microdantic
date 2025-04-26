@@ -209,8 +209,8 @@ class Field:
         *,
         validations: None | list[callable] = None,
         required: bool = True,
-        min_value=None,
-        max_value=None,
+        gt=None,
+        lt=None,
         max_len=None,
         one_of=None,
         discriminator: str = None,
@@ -238,11 +238,11 @@ class Field:
         if required:
             self._validations.append(Validations.NotNull())
 
-        if min_value is not None:
-            self._validations.append(Validations.GreaterThan(min_value))
+        if gt is not None:
+            self._validations.append(Validations.GreaterThan(gt))
 
-        if max_value is not None:
-            self._validations.append(Validations.LessThan(max_value))
+        if lt is not None:
+            self._validations.append(Validations.LessThan(lt))
 
         if max_len is not None:
             self._validations.append(Validations.MaxLen(max_len))
