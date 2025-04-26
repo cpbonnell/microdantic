@@ -28,3 +28,23 @@ interpreted identically on all parts of the distributed application.
 
 Microdantic is thoroughly tested, and all checks are run on both a CPython
 running on an x86 processor, as well as CircuitPython running on an Arduino.
+
+## How this documentation is organized
+
+A high level overview of the sections in this document is useful for quickly
+finding the information that is relevant to your needs. The main sections of 
+the documentation (in order) are:
+
+* **Tutorials** - A quick set of steps to accomplish a specific common task. 
+  Using a tutorial requires little or no prior knowledge of `microdantic` or 
+  `pydantic`.
+* **How-To Guides** - These guides are recipes for using specific parts of 
+  `microdantic`'s functionality. They guide you through the trade-offs and 
+  decisions you will need to make, and how to apply the various features to 
+  solve specific problems. They require some prior knowledge of 
+  `microdantic`, and will often compare and contrast how the same thing is 
+  commonly accomplished in `pydantic`.
+* **Topic Guides** - These sections discuss key concepts at a fairly high 
+  level, and provide useful information about `microdantic`'s implementation.
+* **Reference Guide** - Complete documentation of all `microdantic`'s classes 
+  and functions can be found in the docstrings of those entities.
