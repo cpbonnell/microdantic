@@ -203,7 +203,7 @@ def test_validations():
     except ValidationError as e:
         error_text = str(e)
         assert VALIDATION_ERROR_PREABLE in error_text
-        assert "-- Value must have length less than 10" in error_text
+        assert "-- Value must have length less than or equal to 10" in error_text
 
 
 def test_repr():

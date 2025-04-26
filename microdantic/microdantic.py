@@ -139,17 +139,37 @@ class Validations:
                 lambda x: x > minimum, f"Value must be greater than {minimum}"
             )
 
+    class GreaterThanOrEqual(Validator):
+        def __init__(selfself, minimum):
+            super().__init__(
+                lambda x: x >= minimum,
+                f"Value must be greater than or equal to {minimum}",
+            )
+
     class LessThan(Validator):
         def __init__(self, maximum):
             super().__init__(
                 lambda x: x < maximum, f"Value must be less than {maximum}"
             )
 
+    class LessThanOrEqual(Validator):
+        def __init__(self, maximum):
+            super().__init__(
+                lambda x: x <= maximum, f"Value must be less than or equal to {maximum}"
+            )
+
     class MaxLen(Validator):
         def __init__(self, max_len):
             super().__init__(
                 lambda x: len(x) <= max_len,
-                f"Value must have length less than {max_len}",
+                f"Value must have length less than or equal to {max_len}",
+            )
+
+    class MinLen(Validator):
+        def __init__(self, min_len):
+            super().__init__(
+                lambda x: len(x) >= min_len,
+                f"Value must have length greater than or equal to {min_len}",
             )
 
     class OneOf(Validator):
@@ -209,9 +229,12 @@ class Field:
         *,
         validations: None | list[callable] = None,
         required: bool = True,
-        min_value=None,
-        max_value=None,
-        max_len=None,
+        gt=None,
+        ge=None,
+        lt=None,
+        le=None,
+        min_length=None,
+        max_length=None,
         one_of=None,
         discriminator: str = None,
     ):
@@ -238,14 +261,23 @@ class Field:
         if required:
             self._validations.append(Validations.NotNull())
 
-        if min_value is not None:
-            self._validations.append(Validations.GreaterThan(min_value))
+        if gt is not None:
+            self._validations.append(Validations.GreaterThan(gt))
 
-        if max_value is not None:
-            self._validations.append(Validations.LessThan(max_value))
+        if gt is not None:
+            self._validations.append(Validations.GreaterThanOrEqual(ge))
 
-        if max_len is not None:
-            self._validations.append(Validations.MaxLen(max_len))
+        if lt is not None:
+            self._validations.append(Validations.LessThan(lt))
+
+        if le:
+            self._validations.append(Validations.LessThanOrEqual(le))
+
+        if min_length is not None:
+            self._validations.append(Validations.MinLen(min_length))
+
+        if max_length is not None:
+            self._validations.append(Validations.MaxLen(max_length))
 
         if one_of is not None:
             self._validations.append(Validations.OneOf(one_of))
