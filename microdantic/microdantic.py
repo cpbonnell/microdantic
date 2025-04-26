@@ -165,6 +165,13 @@ class Validations:
                 f"Value must have length less than or equal to {max_len}",
             )
 
+    class MinLen(Validator):
+        def __init__(self, min_len):
+            super().__init__(
+                lambda x: len(x) >= min_len,
+                f"Value must have length greater than or equal to {min_len}",
+            )
+
     class OneOf(Validator):
         def __init__(self, valid_values):
             super().__init__(
@@ -226,6 +233,7 @@ class Field:
         ge=None,
         lt=None,
         le=None,
+        min_length=None,
         max_length=None,
         one_of=None,
         discriminator: str = None,
@@ -264,6 +272,9 @@ class Field:
 
         if le:
             self._validations.append(Validations.LessThanOrEqual(le))
+
+        if min_length is not None:
+            self._validations.append(Validations.MinLen(min_length))
 
         if max_length is not None:
             self._validations.append(Validations.MaxLen(max_length))
