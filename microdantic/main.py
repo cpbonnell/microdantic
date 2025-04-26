@@ -91,6 +91,28 @@ class ModelWithNestedUnion(BaseModel):
     nested_model = Field(Union[NestedModelA, NestedModelB])
 
 
+@register
+class DiscriminatedModelA(BaseModel):
+    __auto_serialize_class_name__ = False
+    internal_key = Field(Literal["A"], default="A")
+    payload = Field(str, default="AAA")
+
+
+@register
+class DiscriminatedModelB(BaseModel):
+    __auto_serialize_class_name__ = False
+    internal_key = Field(Literal["B"], default="B")
+    payload = Field(str, default="BBB")
+
+
+@register
+class ModelWithDiscriminatedUnion(BaseModel):
+    __auto_serialize_class_name__ = False
+    nested_model = Field(
+        Union[DiscriminatedModelA, DiscriminatedModelB], discriminator="internal_key"
+    )
+
+
 # ========== Test Functions ==========
 def test_construction_and_default_values():
     print("...default apple")
@@ -312,17 +334,35 @@ def test_is_discriminated_match():
     from microdantic.microdantic import is_discriminated_match
 
     print("...Correctly identify matches")
-    assert is_discriminated_match("internal_key", "A", NestedModelA)
-    assert is_discriminated_match("internal_key", "B", NestedModelB)
+    assert is_discriminated_match("internal_key", "A", DiscriminatedModelA)
+    assert is_discriminated_match("internal_key", "B", DiscriminatedModelB)
 
     print("...Reject match because discriminator value does not match")
-    assert not is_discriminated_match("internal_key", "B", NestedModelA)
+    assert not is_discriminated_match("internal_key", "B", DiscriminatedModelA)
 
     print("...Reject match because discriminator field is not present")
-    assert not is_discriminated_match("non_existent_key", "A", NestedModelA)
+    assert not is_discriminated_match("non_existent_key", "A", DiscriminatedModelA)
 
     print("...Reject match because the discriminator field is not a literal")
-    assert not is_discriminated_match("payload", "AAA", NestedModelA)
+    assert not is_discriminated_match("payload", "AAA", DiscriminatedModelA)
+
+
+def test_discriminated_union():
+
+    print("...Instantiate discriminated union")
+    ma = ModelWithDiscriminatedUnion(nested_model=DiscriminatedModelA())
+    mb = ModelWithDiscriminatedUnion(nested_model=DiscriminatedModelB())
+
+    print("...Serialize discriminated union")
+    ma_serialized = ma.model_dump()
+    mb_serialized = mb.model_dump()
+
+    print("...Deserialize discriminated union")
+    ma_deserialized = ModelWithDiscriminatedUnion.model_validate(ma_serialized)
+    mb_deserialized = ModelWithDiscriminatedUnion.model_validate(mb_serialized)
+
+    assert isinstance(ma_deserialized.nested_model, DiscriminatedModelA)
+    assert isinstance(mb_deserialized.nested_model, DiscriminatedModelB)
 
 
 # ========== Test Execution ==========
