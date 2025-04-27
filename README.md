@@ -1,8 +1,9 @@
+from tokenize import endpats
+
 # Microdantic
 
-Microdantic is a pure python library that is intended to be a replacement for
-Pydantic that is compatible with MicroPython / CircuitPython, and usable on
-embedded devices.
+Microdantic is a pure python library with similar functionality to Pydantic, 
+but compatible with MicroPython / CircuitPython, and usable on embedded devices.
 
 ## Why Microdantic?
 
@@ -161,6 +162,9 @@ class Point2D(BaseModel):
 point_a = Point2D(x=3.0, y=4.0)
 
 usb_cdc.data.write(point_a.model_dump_jsonb())
+# Note that model_dump_jsonb() will ensure the byte array is terminated with a
+# newline character so that the stream can be easily read on the other end
+# using readline()
 
 ```
 
@@ -185,4 +189,7 @@ for line in serial_instance.readlines():
     # Read the data from the serial port
     point_a = Point2D.model_validate_jsonb(line)
     print(point_a)
+
+    # Note that in a real application you would need extra logic to check
+    # for incomplete or malformed lines
 ```
