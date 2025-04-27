@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "microdantic"
-version = "0.1.0-rc8"
+version = "v0.1.1"
 description = ""
 authors = ["christianbonnell <christian.bonnell@gmail.com>"]
 license = "MIT"
