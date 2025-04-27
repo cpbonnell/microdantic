@@ -140,3 +140,49 @@ well-behaved and follow the rules we expect it to.
 What to read next:
 
 * [Topic Guide: Field Validation]()
+
+## 3. Sending data
+Microdantic provides a simple way to serialize your data into a format that can
+be sent over the network. Most IoT communication channels require your data 
+to be sent in a binary encoding. The BaseModel class provides a method that 
+writes out your entire object (a.k.a. "serializes") in JSON format and 
+encodes it in a byte array. The following code snippet shows an example of 
+sending a `Point2D` object over a USB connection from an Arduino device using 
+CircuitPython: 
+```Python
+# CircuitPython running on an Arduino device
+import usb_cdc
+from microdantic import BaseModel, Field
+
+class Point2D(BaseModel):
+    x = Field(float, default=0.0, ge=0.0)
+    y = Field(float, default=0.0, ge=0.0)
+    
+point_a = Point2D(x=3.0, y=4.0)
+
+usb_cdc.data.write(point_a.model_dump_jsonb())
+
+```
+
+Whatever device the arduino is connected to will be able to read the data 
+from the serial port on the other side and reconstruct the original 
+`Point2D` object from that data:
+
+```Python
+# CPython running a host device
+import serial
+from microdantic import BaseModel, Field
+
+class Point2D(BaseModel):
+  x = Field(float, default=0.0, ge=0.0)
+  y = Field(float, default=0.0, ge=0.0)
+
+
+serial_name = '/dev/ttyUSB0'  # Change this to the name of your serial port
+serial_instance = serial.Serial(serial_name, baudrate=115200)
+
+for line in serial_instance.readlines():
+    # Read the data from the serial port
+    point_a = Point2D.model_validate_jsonb(line)
+    print(point_a)
+```
