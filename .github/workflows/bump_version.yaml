@@ -21,7 +21,7 @@ jobs:
         uses: commitizen-tools/commitizen-action@master
         with:
           push: false
-      - id: Push using ssh
+      - name: Push using ssh
         run: |
           git push origin main --tags
       - name: Print Version
