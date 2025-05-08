@@ -15,11 +15,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: "${{ secrets.GITHUB_TOKEN }}"
+          ssh-key: "${{ secrets.DEPLOY_KEY }}"
       - id: cz
         name: Create bump and changelog
         uses: commitizen-tools/commitizen-action@master
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          push: false
+      - id: Push using ssh
+        run: |
+          git push origin main --tags
       - name: Print Version
         run: echo "Bumped to version ${{ steps.cz.outputs.version }}"
