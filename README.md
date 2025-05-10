@@ -50,12 +50,12 @@ documentation (in order) are:
   implementation.
 * **Reference Guide** - Complete documentation of all `microdantic`'s classes
   and functions can be found in the docstrings of those entities.
-* **Developer Notes** - These are only relevant for contributors making 
-  changes to Microdantic, or developers reading the source code for detailed 
-  insight. Since many of the implementation details will seem confusing or 
-  even "wrong" to developers only used to CPython, some sections of code 
-  contain extensive comments with a discussion of why an unorthodox approach 
-  was chosen for that section of code. 
+* **Developer Notes** - These are only relevant for contributors making changes
+  to Microdantic, or developers reading the source code for detailed insight.
+  Since many of the implementation details will seem confusing or even "wrong"
+  to developers only used to CPython, some sections of code contain extensive
+  comments with a discussion of why an unorthodox approach was chosen for that
+  section of code.
 
 # Tutorials
 
@@ -147,7 +147,7 @@ well-behaved and follow the rules we expect it to.
 
 What to read next:
 
-* [Topic Guide: Field Validation]()
+* [Topic Guide: Field Validation](#field-validation)
 
 ## 3. Sending data
 
@@ -206,3 +206,67 @@ for line in serial_instance.readlines():
 ```
 
 # Topic Guides
+
+## Data Contract
+
+**What is a Data Contract**
+
+Understanding the concept of a data contract is helpful for understanding the
+best practices for use of the Microdantic library.
+
+A **data contract** is a formal agreement between entities that generate data
+(**producers**), and the ones which make use of that data
+(**consumers**). While this could in general refer to more business side
+concerns like change management processes, service level agreements and
+governance metadata, Microdantic is focused only on the parts of a data contract
+that are directly involved with producer applications and consumer applications.
+This lets us focus our discussion on three specific areas of concern that
+Microdantic aims to provide tools for:
+
+1. Schema Definition (names, types, structure)
+2. Data Quality Constraints (nullability, valid ranges, shape)
+3. Intermediate Representation (JSON, packed binary, dict)
+
+The tool that Microdantic provides for schema definition is the `BaseModel`
+class, used as a parent class. Data quality constraints are handled by the
+`Field` class, used as field descriptor. Lastly, the intermediate representation
+is handled by the various `model_dump_*_()` and `model_validate_*_()`
+methods, which are used to serialize and deserialize model classes. Each of
+these three tools has its own How-To guide, discussing its specific use for
+addressing its area of concern.
+
+**Contract as Code**
+
+It completely is possible to write your data contract in a natural language in a
+text document, and then have all interested parties write their own logic for
+implementing it. Many companies do this, and manage to get by. But this
+introduces an unnecessary component of uncertainty (the natural language), and
+lots of unnecessary work (implementing contract compliant code for each
+application).
+
+However, if a set of tools exists that can be shared across all participating
+applications, then the contract can be defined directly in code. This ensures
+that the contract is always interpreted in exactly the same way by all actors.
+Microdantic was designed with this use case in mind.
+
+Microdantic is writen in pure python, with no dependencies. This means that it
+can be included in any number of different applications with no risk of
+dependency mismatch. The Python language features used are compatible with all
+major flavors of Python (CPython, MicroPython, CircuitPython). Unlike Pydantic,
+it also contains no compiled binary code elements. This means that it remains
+usable on platforms with non-standard processor architecture, such as embeded
+platforms and microcontrollers like Arduino.
+
+This means that data contracts written using Microdantic can be shared across
+complex and rich distributed applications. For example, a contract entity could
+be generated on an Arduino device running CircuitPython on an Atmel processor,
+and sent as a packed binary over a Bluetooth connection to a RaspberryPi gateway
+running CPython on an ARM processor. Since it is the same contract, the
+RaspberryPi reconstructs the Bluetooth data into an identical Python object,
+collates it, and sends it as JSON to a server in the cloud. The FastAPI server
+application uses the same contract running CPython on an Intel x86 processor
+architecture, so it too reconstructs the identical Python object. From there 
+the object could be sent to PyScript web application running in MicroPython 
+for display in a dashboard to an end user.
+
+## Field Validation
