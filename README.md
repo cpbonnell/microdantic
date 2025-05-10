@@ -2,8 +2,8 @@ from tokenize import endpats
 
 # Microdantic
 
-Microdantic is a pure python library with similar functionality to Pydantic, 
-but compatible with MicroPython / CircuitPython, and usable on embedded devices.
+Microdantic is a pure python library with similar functionality to Pydantic, but
+compatible with MicroPython / CircuitPython, and usable on embedded devices.
 
 ## Why Microdantic?
 
@@ -36,17 +36,18 @@ A high level overview of the sections in this document is useful for quickly
 finding the information that is relevant to your needs. The main sections of the
 documentation (in order) are:
 
-* **Tutorials** - A quick set of steps to accomplish a specific common task.
-  Using a tutorial requires little or no prior knowledge of `microdantic` or
-  `pydantic`.
+* **[Tutorials](#tutorials)** - A quick set of steps to accomplish a specific
+  common task. Using a tutorial requires little or no prior knowledge of
+  `microdantic` or `pydantic`.
 * **How-To Guides** - These guides are recipes for using specific parts of
   `microdantic`'s functionality. They guide you through the trade-offs and
   decisions you will need to make, and also how to apply the various features to
   solve specific problems. They require some prior knowledge of
   `microdantic`, and will often compare and contrast how the same thing is
   commonly accomplished in `pydantic`.
-* **Topic Guides** - These sections discuss key concepts at a fairly high level,
-  and provide useful information about `microdantic`'s implementation.
+* **[Topic Guides](#topic-guides)** - These sections discuss key concepts at a
+  fairly high level, and provide useful information about `microdantic`'s
+  implementation.
 * **Reference Guide** - Complete documentation of all `microdantic`'s classes
   and functions can be found in the docstrings of those entities.
 
@@ -143,22 +144,25 @@ What to read next:
 * [Topic Guide: Field Validation]()
 
 ## 3. Sending data
+
 Microdantic provides a simple way to serialize your data into a format that can
-be sent over the network. Most IoT communication channels require your data 
-to be sent in a binary encoding. The BaseModel class provides a method that 
-writes out your entire object (a.k.a. "serializes") in JSON format and 
-encodes it in a byte array. The following code snippet shows an example of 
-sending a `Point2D` object over a USB connection from an Arduino device using 
-CircuitPython: 
+be sent over the network. Most IoT communication channels require your data to
+be sent in a binary encoding. The BaseModel class provides a method that writes
+out your entire object (a.k.a. "serializes") in JSON format and encodes it in a
+byte array. The following code snippet shows an example of sending a `Point2D`
+object over a USB connection from an Arduino device using CircuitPython:
+
 ```Python
 # CircuitPython running on an Arduino device
 import usb_cdc
 from microdantic import BaseModel, Field
 
+
 class Point2D(BaseModel):
     x = Field(float, default=0.0, ge=0.0)
     y = Field(float, default=0.0, ge=0.0)
-    
+
+
 point_a = Point2D(x=3.0, y=4.0)
 
 usb_cdc.data.write(point_a.model_dump_jsonb())
@@ -168,8 +172,8 @@ usb_cdc.data.write(point_a.model_dump_jsonb())
 
 ```
 
-Whatever device the arduino is connected to will be able to read the data 
-from the serial port on the other side and reconstruct the original 
+Whatever device the arduino is connected to will be able to read the data from
+the serial port on the other side and reconstruct the original
 `Point2D` object from that data:
 
 ```Python
@@ -177,9 +181,10 @@ from the serial port on the other side and reconstruct the original
 import serial
 from microdantic import BaseModel, Field
 
+
 class Point2D(BaseModel):
-  x = Field(float, default=0.0, ge=0.0)
-  y = Field(float, default=0.0, ge=0.0)
+    x = Field(float, default=0.0, ge=0.0)
+    y = Field(float, default=0.0, ge=0.0)
 
 
 serial_name = '/dev/ttyUSB0'  # Change this to the name of your serial port
@@ -193,3 +198,5 @@ for line in serial_instance.readlines():
     # Note that in a real application you would need extra logic to check
     # for incomplete or malformed lines
 ```
+
+# Topic Guides
