@@ -9,6 +9,7 @@ jobs:
     if: "!startsWith(github.event.head_commit.message, 'bump:')"
     name: Bump version
     runs-on: ubuntu-latest
+    environment: Deploy Environment
 
     steps:
       - name: Check out
