@@ -50,6 +50,12 @@ documentation (in order) are:
   implementation.
 * **Reference Guide** - Complete documentation of all `microdantic`'s classes
   and functions can be found in the docstrings of those entities.
+* **Developer Notes** - These are only relevant for contributors making 
+  changes to Microdantic, or developers reading the source code for detailed 
+  insight. Since many of the implementation details will seem confusing or 
+  even "wrong" to developers only used to CPython, some sections of code 
+  contain extensive comments with a discussion of why an unorthodox approach 
+  was chosen for that section of code. 
 
 # Tutorials
 
