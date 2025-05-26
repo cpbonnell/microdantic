@@ -265,6 +265,37 @@ class VisualEffect(BaseModel):
 
 ```
 
+**Custom constraints**
+If your particular data contract requires more specific logic than what is 
+supplied by the built-in constraint parameters, it is easy to hook into the 
+underlying validation logic of the `Field` class. All you need is a Python 
+function or lambda that takes an instance of a potential value for the field 
+in question, and returns `True` if that value passes the validation, and 
+`False` if it fails.
+
+The `Validations` class contains many of the constraints that are used by 
+the built-in constraint parameters. It also contains a `Validator` 
+class that can be used with your custom validation logic and a custom error 
+text to make your validation logic function alongside all the built-in checks. 
+
+```python
+from microdantic import BaseModel, Field
+from microdantic import Validations
+
+is_even = Validations.Validator(
+  validator_function=lambda n: n % 2 == 0,
+  error_text="Value must be even."
+)
+
+class Numbers(BaseModel):
+    even_number = Field(int, validations=is_even)
+    positive_even_number = Field(
+      int, 
+      validations=[is_even, Validations.GreaterThanOrEqual(0)]
+    )
+```
+
+
 # Topic Guides
 
 ## Data Contract
