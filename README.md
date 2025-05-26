@@ -238,6 +238,32 @@ default value provided as part of the definition, or else an explicit value
 must always be supplied to the constructor every time an instance of the 
 model is instantiated.
 
+**Built-in value constraints**
+There are many cases where it is not sufficient to specify only the data 
+type that a field's values should be constrained to. Often we must constrain 
+values to a specific range, or a specific set of pre-defined values. The 
+`Field` class provides fields for many of the most common constraints that 
+are placed on fields, such as "less than" and "greater than" for numeric 
+values, "max length" and "min length" for string and list values, and "one 
+of" for categorical values. You may consult the docstring of the `Field` 
+class for more information about these constraint parameters, as well as the 
+example below.
+
+```python
+from microdantic import BaseModel, Field
+
+class Color(BaseModel):
+    r = Field(int, ge=0, lt=256)
+    g = Field(int, ge=0, lt=256)
+    b = Field(int, ge=0, lt=256)
+
+class VisualEffect(BaseModel):
+    pattern = Field(str, one_of=["steady", "flash", "breathe"])
+    primary_color = Field(Color)
+    secondary_color = Field(Color, required=False)
+    pattern_name = Field(str, min_length=3, max_length=255)
+
+```
 
 # Topic Guides
 
