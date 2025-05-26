@@ -205,6 +205,40 @@ for line in serial_instance.readlines():
     # for incomplete or malformed lines
 ```
 
+# How-To Guides
+
+## Constrain Field Values
+One of the three main goals of a [data contract](#data-contract) is 
+specifying what values a field is allowed to have. These are known as "data 
+quality constraints". Microdantic provides the `Field` class, which provides 
+a number of robust tools for specifying such constraints. These constraints 
+are not just polite requests (the way type hints in Python are). Every 
+constraint for a field is enforced whenever a new value is assigned to a 
+field. If a default value is supplied as part of the field definition, then 
+the constraints are enforced on the default value as part of the [class 
+registration](#model-class-registration). If any of the constraints fails 
+for a value, then Microdantic will raise a `ValidationError` wit ha list of 
+all the constraints that failed.
+
+**Type, nullability, and default value**
+The first constraint usually placed on a field is a constraint on the data 
+type. Microdantic is very strict on the type checking, and will raise an 
+error, for example, if you try to assign an integer to a field whose only 
+allowable data type is float. If a field may contain values of more than one 
+data type, Microdantic provides a built-in `Union` class that can be used to 
+specify these values (see the example below). Note, however, that this is 
+**not** the same as the `typing.Union` class provided as part of the 
+`typing` module of CPython. This is because the `typing` module is not 
+provided as part of MicroPython or CircuitPython.
+
+The `Field` class also has a parameter `required` to indicate whether a 
+field is allowed to have a value of `None`. By default, all fields are 
+required. If a particular field is required, then it must either have a 
+default value provided as part of the definition, or else an explicit value 
+must always be supplied to the constructor every time an instance of the 
+model is instantiated.
+
+
 # Topic Guides
 
 ## Data Contract
@@ -269,4 +303,6 @@ architecture, so it too reconstructs the identical Python object. From there
 the object could be sent to PyScript web application running in MicroPython 
 for display in a dashboard to an end user.
 
-## Field Validation
+## Model Class Registration
+TODO
+
