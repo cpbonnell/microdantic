@@ -2,8 +2,8 @@ from tokenize import endpats
 
 # Microdantic
 
-Microdantic is a pure python library with similar functionality to Pydantic, 
-but compatible with MicroPython / CircuitPython, and usable on embedded devices.
+Microdantic is a pure python library with similar functionality to Pydantic, but
+compatible with MicroPython / CircuitPython, and usable on embedded devices.
 
 ## Why Microdantic?
 
@@ -36,19 +36,26 @@ A high level overview of the sections in this document is useful for quickly
 finding the information that is relevant to your needs. The main sections of the
 documentation (in order) are:
 
-* **Tutorials** - A quick set of steps to accomplish a specific common task.
-  Using a tutorial requires little or no prior knowledge of `microdantic` or
-  `pydantic`.
+* **[Tutorials](#tutorials)** - A quick set of steps to accomplish a specific
+  common task. Using a tutorial requires little or no prior knowledge of
+  `microdantic` or `pydantic`.
 * **How-To Guides** - These guides are recipes for using specific parts of
   `microdantic`'s functionality. They guide you through the trade-offs and
   decisions you will need to make, and also how to apply the various features to
   solve specific problems. They require some prior knowledge of
   `microdantic`, and will often compare and contrast how the same thing is
   commonly accomplished in `pydantic`.
-* **Topic Guides** - These sections discuss key concepts at a fairly high level,
-  and provide useful information about `microdantic`'s implementation.
+* **[Topic Guides](#topic-guides)** - These sections discuss key concepts at a
+  fairly high level, and provide useful information about `microdantic`'s
+  implementation.
 * **Reference Guide** - Complete documentation of all `microdantic`'s classes
   and functions can be found in the docstrings of those entities.
+* **Developer Notes** - These are only relevant for contributors making changes
+  to Microdantic, or developers reading the source code for detailed insight.
+  Since many of the implementation details will seem confusing or even "wrong"
+  to developers only used to CPython, some sections of code contain extensive
+  comments with a discussion of why an unorthodox approach was chosen for that
+  section of code.
 
 # Tutorials
 
@@ -140,25 +147,28 @@ well-behaved and follow the rules we expect it to.
 
 What to read next:
 
-* [Topic Guide: Field Validation]()
+* [Topic Guide: Field Validation](#field-validation)
 
 ## 3. Sending data
+
 Microdantic provides a simple way to serialize your data into a format that can
-be sent over the network. Most IoT communication channels require your data 
-to be sent in a binary encoding. The BaseModel class provides a method that 
-writes out your entire object (a.k.a. "serializes") in JSON format and 
-encodes it in a byte array. The following code snippet shows an example of 
-sending a `Point2D` object over a USB connection from an Arduino device using 
-CircuitPython: 
+be sent over the network. Most IoT communication channels require your data to
+be sent in a binary encoding. The BaseModel class provides a method that writes
+out your entire object (a.k.a. "serializes") in JSON format and encodes it in a
+byte array. The following code snippet shows an example of sending a `Point2D`
+object over a USB connection from an Arduino device using CircuitPython:
+
 ```Python
 # CircuitPython running on an Arduino device
 import usb_cdc
 from microdantic import BaseModel, Field
 
+
 class Point2D(BaseModel):
     x = Field(float, default=0.0, ge=0.0)
     y = Field(float, default=0.0, ge=0.0)
-    
+
+
 point_a = Point2D(x=3.0, y=4.0)
 
 usb_cdc.data.write(point_a.model_dump_jsonb())
@@ -168,8 +178,8 @@ usb_cdc.data.write(point_a.model_dump_jsonb())
 
 ```
 
-Whatever device the arduino is connected to will be able to read the data 
-from the serial port on the other side and reconstruct the original 
+Whatever device the arduino is connected to will be able to read the data from
+the serial port on the other side and reconstruct the original
 `Point2D` object from that data:
 
 ```Python
@@ -177,9 +187,10 @@ from the serial port on the other side and reconstruct the original
 import serial
 from microdantic import BaseModel, Field
 
+
 class Point2D(BaseModel):
-  x = Field(float, default=0.0, ge=0.0)
-  y = Field(float, default=0.0, ge=0.0)
+    x = Field(float, default=0.0, ge=0.0)
+    y = Field(float, default=0.0, ge=0.0)
 
 
 serial_name = '/dev/ttyUSB0'  # Change this to the name of your serial port
@@ -193,3 +204,128 @@ for line in serial_instance.readlines():
     # Note that in a real application you would need extra logic to check
     # for incomplete or malformed lines
 ```
+
+# How-To Guides
+
+## Constrain Field Values
+One of the three main goals of a [data contract](#data-contract) is 
+specifying what values a field is allowed to have. These are known as "data 
+quality constraints". Microdantic provides the `Field` class, which provides 
+a number of robust tools for specifying such constraints. These constraints 
+are not just polite requests (the way type hints in Python are). Every 
+constraint for a field is enforced whenever a new value is assigned to a 
+field. If a default value is supplied as part of the field definition, then 
+the constraints are enforced on the default value as part of the [class 
+registration](#model-class-registration). If any of the constraints fails 
+for a value, then Microdantic will raise a `ValidationError` wit ha list of 
+all the constraints that failed.
+
+**Type, nullability, and default value**
+The first constraint usually placed on a field is a constraint on the data 
+type. Microdantic is very strict on the type checking, and will raise an 
+error, for example, if you try to assign an integer to a field whose only 
+allowable data type is float. If a field may contain values of more than one 
+data type, Microdantic provides a built-in `Union` class that can be used to 
+specify these values (see the example below). Note, however, that this is 
+**not** the same as the `typing.Union` class provided as part of the 
+`typing` module of CPython. This is because the `typing` module is not 
+provided as part of MicroPython or CircuitPython.
+
+The `Field` class also has a parameter `required` to indicate whether a 
+field is allowed to have a value of `None`. By default, all fields are 
+required. If a particular field is required, then it must either have a 
+default value provided as part of the definition, or else an explicit value 
+must always be supplied to the constructor every time an instance of the 
+model is instantiated.
+
+**Built-in value constraints**
+There are many cases where it is not sufficient to specify only the data 
+type that a field's values should be constrained to. Often we must constrain 
+values to a specific range, or a specific set of pre-defined values. The 
+`Field` class provides fields for many of the most common constraints that 
+are placed on fields, such as "less than" and "greater than" for numeric 
+values, "max length" and "min length" for string and list values, and "one 
+of" for categorical values. You may consult the docstring of the `Field` 
+class for more information about these constraint parameters, as well as the 
+example below.
+
+```python
+from microdantic import BaseModel, Field
+
+class Color(BaseModel):
+    r = Field(int, ge=0, lt=256)
+    g = Field(int, ge=0, lt=256)
+    b = Field(int, ge=0, lt=256)
+
+class VisualEffect(BaseModel):
+    pattern = Field(str, one_of=["steady", "flash", "breathe"])
+    primary_color = Field(Color)
+    secondary_color = Field(Color, required=False)
+    pattern_name = Field(str, min_length=3, max_length=255)
+
+```
+
+**Custom constraints**
+If your particular data contract requires more specific logic than what is 
+supplied by the built-in constraint parameters, it is easy to hook into the 
+underlying validation logic of the `Field` class. All you need is a Python 
+function or lambda that takes an instance of a potential value for the field 
+in question, and returns `True` if that value passes the validation, and 
+`False` if it fails.
+
+The `Validations` class contains many of the constraints that are used by 
+the built-in constraint parameters. It also contains a `Validator` 
+class that can be used with your custom validation logic and a custom error 
+text to make your validation logic function alongside all the built-in checks. 
+
+```python
+from microdantic import BaseModel, Field
+from microdantic import Validations
+
+is_even = Validations.Validator(
+  validator_function=lambda n: n % 2 == 0,
+  error_text="Value must be even."
+)
+
+class Numbers(BaseModel):
+    even_number = Field(int, validations=is_even)
+    positive_even_number = Field(
+      int, 
+      validations=[is_even, Validations.GreaterThanOrEqual(0)]
+    )
+```
+
+
+# Topic Guides
+
+## Data Contract
+
+**What is a Data Contract**
+
+Understanding the concept of a data contract is helpful for understanding the
+best practices for use of the Microdantic library.
+
+A **data contract** is a formal agreement between entities that generate data
+(**producers**), and the ones which make use of that data
+(**consumers**). While this could in general refer to more business side
+concerns like change management processes, service level agreements and
+governance metadata, Microdantic is focused only on the parts of a data contract
+that are directly involved with producer applications and consumer applications.
+This lets us focus our discussion on three specific areas of concern that
+Microdantic aims to provide tools for:
+
+1. Schema Definition (names, types, structure)
+2. Data Quality Constraints (nullability, valid ranges, shape)
+3. Intermediate Representation (JSON, packed binary, dict)
+
+The tool that Microdantic provides for schema definition is the `BaseModel`
+class, used as a parent class. Data quality constraints are handled by the
+`Field` class, used as field descriptor. Lastly, the intermediate representation
+is handled by the various `model_dump_*_()` and `model_validate_*_()`
+methods, which are used to serialize and deserialize model classes. Each of
+these three tools has its own How-To guide, discussing its specific use for
+addressing its area of concern.
+
+## Model Class Registration
+TODO
+
