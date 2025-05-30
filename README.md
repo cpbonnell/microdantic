@@ -207,6 +207,16 @@ for line in serial_instance.readlines():
 
 # How-To Guides
 
+## Schema Definition
+Schemas are defined in Microdantic by deriving classes from the `BaseModel` 
+class and then defining fields in a similar way to Python's Data Classes, or 
+Pydantic's similarly named `BaseModel` class. Like Pydantic, model classes 
+can be nested if your data structure needs to be nested. When your model 
+gets serialized, all nested model classes will also be recursively 
+serialized. For an example of this, you may consult the code example in the 
+*Built-In Value Constraints* section of the 
+[Constrain Field Values](#constrain-field-values) how-to guide.
+
 ## Constrain Field Values
 One of the three main goals of a [data contract](#data-contract) is 
 specifying what values a field is allowed to have. These are known as "data 
