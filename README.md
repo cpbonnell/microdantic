@@ -207,55 +207,68 @@ for line in serial_instance.readlines():
 
 # How-To Guides
 
+## Schema Definition
+
+Schemas are defined in Microdantic by deriving classes from the `BaseModel`
+class and then defining fields in a similar way to Python's Data Classes, or
+Pydantic's similarly named `BaseModel` class. Like Pydantic, model classes can
+be nested if your data structure needs to be nested. When your model gets
+serialized, all nested model classes will also be recursively serialized. For an
+example of this, you may consult the code example in the
+*Built-In Value Constraints* section of the
+[Constrain Field Values](#constrain-field-values) how-to guide.
+
 ## Constrain Field Values
-One of the three main goals of a [data contract](#data-contract) is 
-specifying what values a field is allowed to have. These are known as "data 
-quality constraints". Microdantic provides the `Field` class, which provides 
-a number of robust tools for specifying such constraints. These constraints 
-are not just polite requests (the way type hints in Python are). Every 
-constraint for a field is enforced whenever a new value is assigned to a 
-field. If a default value is supplied as part of the field definition, then 
-the constraints are enforced on the default value as part of the [class 
-registration](#model-class-registration). If any of the constraints fails 
-for a value, then Microdantic will raise a `ValidationError` wit ha list of 
-all the constraints that failed.
+
+One of the three main goals of a [data contract](#data-contract) is specifying
+what values a field is allowed to have. These are known as "data quality
+constraints". Microdantic provides the `Field` class, which provides a number of
+robust tools for specifying such constraints. These constraints are not just
+polite requests (the way type hints in Python are). Every constraint for a field
+is enforced whenever a new value is assigned to a field. If a default value is
+supplied as part of the field definition, then the constraints are enforced on
+the default value as part of
+the [class registration](#model-class-registration). If any of the constraints
+fails for a value, then Microdantic will raise a `ValidationError` wit ha list
+of all the constraints that failed.
 
 **Type, nullability, and default value**
-The first constraint usually placed on a field is a constraint on the data 
-type. Microdantic is very strict on the type checking, and will raise an 
-error, for example, if you try to assign an integer to a field whose only 
-allowable data type is float. If a field may contain values of more than one 
-data type, Microdantic provides a built-in `Union` class that can be used to 
-specify these values (see the example below). Note, however, that this is 
-**not** the same as the `typing.Union` class provided as part of the 
-`typing` module of CPython. This is because the `typing` module is not 
-provided as part of MicroPython or CircuitPython.
+The first constraint usually placed on a field is a constraint on the data type.
+Microdantic is very strict on the type checking, and will raise an error, for
+example, if you try to assign an integer to a field whose only allowable data
+type is float. If a field may contain values of more than one data type,
+Microdantic provides a built-in `Union` class that can be used to specify these
+values (see the example below). Note, however, that this is
+**not** the same as the `typing.Union` class provided as part of the
+`typing` module of CPython. This is because the `typing` module is not provided
+as part of MicroPython or CircuitPython.
 
-The `Field` class also has a parameter `required` to indicate whether a 
-field is allowed to have a value of `None`. By default, all fields are 
-required. If a particular field is required, then it must either have a 
-default value provided as part of the definition, or else an explicit value 
-must always be supplied to the constructor every time an instance of the 
-model is instantiated.
+The `Field` class also has a parameter `required` to indicate whether a field is
+allowed to have a value of `None`. By default, all fields are required. If a
+particular field is required, then it must either have a default value provided
+as part of the definition, or else an explicit value must always be supplied to
+the constructor every time an instance of the model is instantiated.
 
 **Built-in value constraints**
-There are many cases where it is not sufficient to specify only the data 
-type that a field's values should be constrained to. Often we must constrain 
-values to a specific range, or a specific set of pre-defined values. The 
-`Field` class provides fields for many of the most common constraints that 
-are placed on fields, such as "less than" and "greater than" for numeric 
-values, "max length" and "min length" for string and list values, and "one 
-of" for categorical values. You may consult the docstring of the `Field` 
-class for more information about these constraint parameters, as well as the 
+There are many cases where it is not sufficient to specify only the data type
+that a field's values should be constrained to. Often we must constrain values
+to a specific range, or a specific set of pre-defined values. The
+`Field` class provides fields for many of the most common constraints that are
+placed on fields, such as "less than" and "greater than" for numeric values, "
+max length" and "min length" for string and list values, and "one of" for
+categorical values. You may consult the docstring of the `Field`
+class for more information about these constraint parameters, as well as the
 example below.
 
 ```python
 from microdantic import BaseModel, Field
 
+
 class Color(BaseModel):
     r = Field(int, ge=0, lt=256)
     g = Field(int, ge=0, lt=256)
     b = Field(int, ge=0, lt=256)
+
 
 class VisualEffect(BaseModel):
     pattern = Field(str, one_of=["steady", "flash", "breathe"])
@@ -266,35 +279,35 @@ class VisualEffect(BaseModel):
 ```
 
 **Custom constraints**
-If your particular data contract requires more specific logic than what is 
-supplied by the built-in constraint parameters, it is easy to hook into the 
-underlying validation logic of the `Field` class. All you need is a Python 
-function or lambda that takes an instance of a potential value for the field 
-in question, and returns `True` if that value passes the validation, and 
+If your particular data contract requires more specific logic than what is
+supplied by the built-in constraint parameters, it is easy to hook into the
+underlying validation logic of the `Field` class. All you need is a Python
+function or lambda that takes an instance of a potential value for the field in
+question, and returns `True` if that value passes the validation, and
 `False` if it fails.
 
-The `Validations` class contains many of the constraints that are used by 
-the built-in constraint parameters. It also contains a `Validator` 
-class that can be used with your custom validation logic and a custom error 
-text to make your validation logic function alongside all the built-in checks. 
+The `Validations` class contains many of the constraints that are used by the
+built-in constraint parameters. It also contains a `Validator`
+class that can be used with your custom validation logic and a custom error text
+to make your validation logic function alongside all the built-in checks.
 
 ```python
 from microdantic import BaseModel, Field
 from microdantic import Validations
 
 is_even = Validations.Validator(
-  validator_function=lambda n: n % 2 == 0,
-  error_text="Value must be even."
+    validator_function=lambda n: n % 2 == 0,
+    error_text="Value must be even."
 )
+
 
 class Numbers(BaseModel):
     even_number = Field(int, validations=is_even)
     positive_even_number = Field(
-      int, 
-      validations=[is_even, Validations.GreaterThanOrEqual(0)]
+        int,
+        validations=[is_even, Validations.GreaterThanOrEqual(0)]
     )
 ```
-
 
 # Topic Guides
 
@@ -327,5 +340,60 @@ these three tools has its own How-To guide, discussing its specific use for
 addressing its area of concern.
 
 ## Model Class Registration
-TODO
 
+This section contains advanced concepts that may be helpful for speed
+optimization, but are not needed by most developers.
+
+Most libraries in CPython that need to do some work at the time of a class
+definition make use of CPython's rich metaprogramming features. However, Micro
+Python does not have these features. Microdantic is able to get around these
+language constraints by having model classes "register" themselves in a process
+that performs a number of class set-up tasks. If you do not explicitly register
+your model class, then the registration will happen automatically the first time
+an instance of that model class is instantiated. This ensures that the 
+metaprogramming tasks needed to finish defining the class happen 
+transparently.
+
+The problem with this approach is that most applications running on embeded 
+devices using CircuitPython follow a structure where the application has a 
+long start-up period where all functions and classes are defined, and all 
+resources are initialized. Then the application enters a time sensitive event 
+loop that reads sensors and adjusts actuators on the device. Since model 
+class registration happens at the first instantiation of the class, this 
+means that the registration often happens not during the long start-up 
+period where one would expect, but rather during the first few event loops. 
+The problem can be greatly exacerbated if the application defined a large 
+number of nested model classes.
+
+If you want to front-load the registration of your model classes to the 
+start-up portion of your application so that your loops are predictable and 
+your application remains responsive, Microdantic offers several options. 
+First, there is a `@register` decorator that can be used on model classes 
+that will ensure the registration happens immediately with the class 
+definition. Secondly, all child classes of `BaseModel` have a class method 
+that performs registration when invoked. Together these tools allow you to 
+time when you would like the computational overhead to fall.
+
+```python
+from microdantic import BaseModel, Field, register
+
+@register
+class ModelA(BaseModel):
+  foo = Field(str)
+  # ModelA is initialized when it is defined. No delay.
+
+class ModelB(BaseModel):
+  foo = Field(str)
+
+class ModelC(BaseModel):
+  foo = Field(str)
+
+# ModelB is now initialized. Delayed, but still before first instantiation.
+ModelB.register_class()
+
+
+a = ModelA(foo="bar")
+b = ModelB(foo="bar")
+c = ModelC(foo="bar")  # ModelC is only now initialized implicitly.
+
+```
