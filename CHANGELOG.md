@@ -1,3 +1,9 @@
+## 0.3.0 (2025-06-21)
+
+### Feat
+
+- BaseModel can detect which child class should be instantiated
+
 ## 0.2.0 (2025-05-10)
 
 ### Feat
