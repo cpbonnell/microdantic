@@ -365,6 +365,23 @@ def test_discriminated_union():
     assert isinstance(mb_deserialized.nested_model, DiscriminatedModelB)
 
 
+def test_auto_discrimination_from_base_model():
+    print("...Instantiate nested union")
+    ma = ModelWithNestedUnion(nested_model=NestedModelA())
+    mb = ModelWithNestedUnion(nested_model=NestedModelB())
+
+    print("...Serialize nested union")
+    ma_serialized = ma.model_dump()
+    mb_serialized = mb.model_dump()
+
+    print("...Deserialize nested union")
+    ma_deserialized = BaseModel.model_validate(ma_serialized)
+    mb_deserialized = BaseModel.model_validate(mb_serialized)
+
+    assert isinstance(ma_deserialized.nested_model, NestedModelA)
+    assert isinstance(mb_deserialized.nested_model, NestedModelB)
+
+
 # ========== Test Execution ==========
 def run_tests():
     print("==================== Beginning Test Suite ====================")

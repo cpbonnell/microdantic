@@ -581,9 +581,21 @@ class BaseModel:
         :return: An instance of the model class.
         """
 
+        if cls == BaseModel:
+            actual_class_name = data.get("__base_model_class_name__")
+            if not actual_class_name:
+                raise ValueError(
+                    "Cannot instantiate a base model. "
+                    "Ensure your validated object contains a __base_model_class_name__ field."
+                )
+            actual_class = cls.__registered_child_classes__[actual_class_name]
+            print(f"Changing validated class to {actual_class}")
+        else:
+            actual_class = cls
+
         # If we get nested BaseModel objects, we need to recursively validate them
         # before constructing the instance.
-        for field_name, descriptor in cls.iter_fields():
+        for field_name, descriptor in actual_class.iter_fields():
             relevant_data = data.get(field_name)
 
             if isinstance(relevant_data, list):
@@ -600,7 +612,7 @@ class BaseModel:
                 # the constructor
                 pass
 
-        instance = cls(**data)
+        instance = actual_class(**data)
         return instance
 
     def model_dump_json(self) -> str:
