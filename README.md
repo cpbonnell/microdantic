@@ -1,5 +1,3 @@
-from tokenize import endpats
-
 # Microdantic
 
 Microdantic is a pure python library with similar functionality to Pydantic, but
