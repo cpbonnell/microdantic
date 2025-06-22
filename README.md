@@ -1,5 +1,3 @@
-from tokenize import endpats
-
 # Microdantic
 
 Microdantic is a pure python library with similar functionality to Pydantic, but
@@ -350,50 +348,107 @@ Python does not have these features. Microdantic is able to get around these
 language constraints by having model classes "register" themselves in a process
 that performs a number of class set-up tasks. If you do not explicitly register
 your model class, then the registration will happen automatically the first time
-an instance of that model class is instantiated. This ensures that the 
-metaprogramming tasks needed to finish defining the class happen 
-transparently.
+an instance of that model class is instantiated. This ensures that the
+metaprogramming tasks needed to finish defining the class happen transparently.
 
-The problem with this approach is that most applications running on embeded 
-devices using CircuitPython follow a structure where the application has a 
-long start-up period where all functions and classes are defined, and all 
-resources are initialized. Then the application enters a time sensitive event 
-loop that reads sensors and adjusts actuators on the device. Since model 
-class registration happens at the first instantiation of the class, this 
-means that the registration often happens not during the long start-up 
-period where one would expect, but rather during the first few event loops. 
-The problem can be greatly exacerbated if the application defined a large 
-number of nested model classes.
+The problem with this approach is that most applications running on embeded
+devices using CircuitPython follow a structure where the application has a long
+start-up period where all functions and classes are defined, and all resources
+are initialized. Then the application enters a time sensitive event loop that
+reads sensors and adjusts actuators on the device. Since model class
+registration happens at the first instantiation of the class, this means that
+the registration often happens not during the long start-up period where one
+would expect, but rather during the first few event loops. The problem can be
+greatly exacerbated if the application defined a large number of nested model
+classes.
 
-If you want to front-load the registration of your model classes to the 
-start-up portion of your application so that your loops are predictable and 
-your application remains responsive, Microdantic offers several options. 
-First, there is a `@register` decorator that can be used on model classes 
-that will ensure the registration happens immediately with the class 
-definition. Secondly, all child classes of `BaseModel` have a class method 
-that performs registration when invoked. Together these tools allow you to 
-time when you would like the computational overhead to fall.
+If you want to front-load the registration of your model classes to the start-up
+portion of your application so that your loops are predictable and your
+application remains responsive, Microdantic offers several options. First, there
+is a `@register` decorator that can be used on model classes that will ensure
+the registration happens immediately with the class definition. Secondly, all
+child classes of `BaseModel` have a class method that performs registration when
+invoked. Together these tools allow you to time when you would like the
+computational overhead to fall.
 
 ```python
 from microdantic import BaseModel, Field, register
 
+
 @register
 class ModelA(BaseModel):
-  foo = Field(str)
-  # ModelA is initialized when it is defined. No delay.
+    foo = Field(str)
+    # ModelA is initialized when it is defined. No delay.
+
 
 class ModelB(BaseModel):
-  foo = Field(str)
+    foo = Field(str)
+
 
 class ModelC(BaseModel):
-  foo = Field(str)
+    foo = Field(str)
+
 
 # ModelB is now initialized. Delayed, but still before first instantiation.
 ModelB.register_class()
-
 
 a = ModelA(foo="bar")
 b = ModelB(foo="bar")
 c = ModelC(foo="bar")  # ModelC is only now initialized implicitly.
 
+```
+
+## Auto-Discrimination from BaseModel
+
+When receiving serialized objects over a newtork connection, it is possible that
+the data could represent any one of several different models. Microdantic
+provides an auto-discrimination feature, turned on by default. This feature adds
+metadata at the base level of the serialized model. This metadata can be used by
+Microdantic to automatically determine which model the serialized data should be
+re-constituted into.
+
+**Note:** This auto-discrimination is only available if the following conditions
+are met:
+
+1. the exact same model definition is used on both the sending and receiving end
+   of the connection
+2. the model has to be [registered](#model-class-registration)
+   before it can be discriminated
+
+Since the auto discrimination is on be default, using it is as trivial as
+calling one of the `model_validate_*()` methods on the BaseModel class:
+
+```python
+from microdantic import BaseModel, Field, register
+
+
+@register
+class Point2D(BaseModel):
+    x = Field(float, default=0.0, ge=0.0)
+    y = Field(float, default=0.0, ge=0.0)
+
+
+original_point = Point2D(x=1.0, y=-1.0)
+serialized_point = original_point.model_dump_jsonb()
+
+# Send the serialized model over the network...
+
+reconstructed_point = BaseModel.model_validate_jsonb(serialized_point)
+assert isinstance(reconstructed_point, Point2D)
+assert reconstructed_point == original_point
+```
+
+If you wish to disable auto-discrimination for your model, you may define it
+with the class variable `"__auto_serialize_class_name__"` set to `False`.
+
+```python
+from microdantic import BaseModel, Field, register
+
+
+@register
+class Point2D(BaseModel):
+    """A Point2D model with auto-serialization metadata turned off."""
+    __auto_serialize_class_name__ = False
+    x = Field(float, default=0.0, ge=0.0)
+    y = Field(float, default=0.0, ge=0.0)
 ```
