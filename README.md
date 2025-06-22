@@ -37,7 +37,8 @@ documentation (in order) are:
 * **[Tutorials](#tutorials)** - A quick set of steps to accomplish a specific
   common task. Using a tutorial requires little or no prior knowledge of
   `microdantic` or `pydantic`.
-* **How-To Guides** - These guides are recipes for using specific parts of
+* **[How-To Guides](#how-to-guides)** - These guides are recipes for using
+  specific parts of
   `microdantic`'s functionality. They guide you through the trade-offs and
   decisions you will need to make, and also how to apply the various features to
   solve specific problems. They require some prior knowledge of
