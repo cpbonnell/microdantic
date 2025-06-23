@@ -382,8 +382,8 @@ class Field:
 
         # Check to see if we can make this a discriminated union with extra info from the owner class
         # (that is, if the field is a Union that is not already discriminated, and the owner class has a
-        # __base_model_class_name__ attribute). This is a bit of a hack, but it's the best way I can think
-        # of to do this without a metaclass
+        # __base_model_class_name__ attribute). This is a bit of a hack, but it's the simplest way that
+        # doesn't require a metaclass
         if (
             isinstance(self.data_type, _Union)
             and not self.discriminator
@@ -461,8 +461,6 @@ class Field:
         # If no possible parse options can be found, raise and let the user sort it out
         raise ValueError(f"Cannot parse dict for field of type {self.data_type}")
 
-        return None
-
 
 class BaseModel:
 
@@ -472,7 +470,7 @@ class BaseModel:
     @classmethod
     def register_class(cls):
         """
-        Conduct various class setup tasks for the class.
+        Conduct various setup tasks for the class.
 
         The method will automatically be invoked the first time an instance
         of the class is created, but it can also be called explicitly if
@@ -483,7 +481,7 @@ class BaseModel:
         This is necessary because MicroPython does not support metaclasses,
         and so any custom class definition behavior needs to be in a function
         that is invoked explicitly. MicroPython also does not (yet) do all the
-        normal magic around class definition, so we have to do some of the work
+        normal magic around field descriptors, so we have to do some of the work
         ourselves.
 
         This method is idempotent, so it can be called multiple times without
@@ -536,7 +534,8 @@ class BaseModel:
 
         # Reliably automating the struct packing process requires a
         # consistent ordering of the fields, so we determine a fixed
-        # order here and store it in the class.
+        # order here and store it in the class. (Struct Packing is
+        # still on the roadmap)
         cls.__field_names__ = tuple(sorted(all_field_names))
 
         # Register the child class with BaseModel
@@ -605,6 +604,9 @@ class BaseModel:
         :return: An instance of the model class.
         """
 
+        # If the method is being called on this class (rather than a child class), then
+        # we must auto-discriminate which registered child class is atually the one that
+        # needs to be hydrated and returned
         if cls == BaseModel:
             actual_class_name = data.get("__base_model_class_name__")
             if not actual_class_name:
