@@ -14,19 +14,44 @@ small devices (like Arduino), and makes use of some metaprogramming features not
 available on MicroPython or CircuitPython. So it is not suitable as a tool for
 enforcing data contracts over IoT networks such as BlueTooth or USB connections.
 
-Enter Microdantic! Microdantic is intended to be a relatively small library
-written in a style of Python compatible with MicroPython, CircuitPython, and
-CPython. It replicates much of the core functionality and syntax of Pydantic in
-a form that is deployable with Python projects running on small microcontroller
-devices.
+Enter Microdantic! Microdantic is intended to be a small, no-dependencies
+library written in a style of Python compatible with MicroPython, CircuitPython,
+and CPython. It replicates much of the core functionality and syntax of Pydantic
+in a form that is deployable with Python projects running on small
+microcontroller devices. And since Microdantic fits in a single file, it is 
+easy to include as a dependency, even on CircuitPython projects that do not 
+have a package manager.
 
 Using Microdantic, developers can write data models to be shared between a fleet
 of microcontrollers, a Python gateway app running on a RaspberryPi, and AWS
 Lambda functions running in the cloud, confident that the contract will be
 interpreted identically on all parts of the distributed application.
 
-Microdantic is thoroughly tested, and all checks are run on both a CPython
-running on an x86 processor, as well as CircuitPython running on an Arduino.
+Microdantic is thoroughly tested, and all checks are run on both CPython running
+on an x86 processor, as well as CircuitPython running on an Arduino.
+
+## Getting Started
+
+To include Microdantic as a dependency in a CPython project, you can add it
+directly from the GitHub URL:
+
+```shell
+# Using pip
+pip install git+https://github.com/username/repository.git
+
+# Using Poetry
+poetry add --git https://github.com/myusername/myrepository.git
+
+# Using UV
+uv add git+https://github.com/encode/httpx
+```
+
+To use Microdantic on a microcontroller, first make sure that you have set up
+your device with [CircuitPython](circuitpython.org). Then copy the
+`microdantic.py` file into the root of the device. If you want to save space,
+then you can optionally compile `microdantic.py` to a
+[.mpy](https://docs.micropython.org/en/latest/reference/mpyfiles.html)
+that will load faster consume less memory.
 
 ## How this documentation is organized
 
