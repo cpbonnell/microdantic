@@ -136,6 +136,19 @@ class ModelWithDiscriminatedUnion(BaseModel):
     )
 
 
+@register
+class ModelWithMethod(BaseModel):
+    a: int = Field(int)
+    b: int = Field(int)
+
+    @property
+    def highest(self):
+        return max(self.a, self.b)
+
+    def get_highest(self):
+        return max(self.a, self.b)
+
+
 # ========== Test Functions ==========
 def test_construction_and_default_values():
     print("...default apple")
@@ -403,6 +416,17 @@ def test_auto_discrimination_from_base_model():
 
     assert isinstance(ma_deserialized.nested_model, NestedModelA)
     assert isinstance(mb_deserialized.nested_model, NestedModelB)
+
+
+def test_model_with_methods():
+    print("...Instantiate model object")
+    model = ModelWithMethod(a=2, b=5)
+
+    print("...checking method")
+    assert model.get_highest() == 5
+
+    print("...checking property")
+    assert model.highest == 5, f"model.highest is {model.highest}"
 
 
 # ========== Test Execution ==========

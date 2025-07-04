@@ -24,6 +24,7 @@ SOFTWARE.
 
 __version__ = "v0.3.1"
 import json
+from functools import cached_property
 
 
 class _SpecialType:
@@ -503,8 +504,13 @@ class BaseModel:
         # same type as the default value, rather than the type of the
         # annotation.
         new_fields = dict()
+        descriptor_types = (Field, property, classmethod, staticmethod, cached_property)
         for name, field in cls.__dict__.items():
-            if not name.startswith("_") and not isinstance(field, Field):
+            if (
+                not name.startswith("_")
+                and not callable(field)
+                and not isinstance(field, descriptor_types)
+            ):
                 new_fields[name] = Field(data_type=type(field), default=field)
 
         for name, field_obj in new_fields.items():
