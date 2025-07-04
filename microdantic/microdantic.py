@@ -24,7 +24,22 @@ SOFTWARE.
 
 __version__ = "v0.3.1"
 import json
-from functools import cached_property
+
+try:
+    from functools import cached_property
+except (ImportError, AttributeError):
+    # Fallback for CircuitPython or MicroPython
+    class cached_property:  # noqa
+        def __init__(self, func):
+            self.func = func
+            self.attr_name = func.__name__
+
+        def __get__(self, instance, owner):
+            if instance is None:
+                return self
+            value = self.func(instance)
+            setattr(instance, self.attr_name, value)
+            return value
 
 
 class _SpecialType:

@@ -37,7 +37,11 @@ running `poetry run tests` inside the project directory.
 
 import json
 import time
-from functools import cached_property
+
+try:
+    from functools import cached_property
+except (ImportError, AttributeError):
+    from microdantic import cached_property
 
 from microdantic import (
     BaseModel,
@@ -376,7 +380,10 @@ def test_nested_union():
 
 
 def test_is_discriminated_match():
-    from microdantic.microdantic import _is_discriminated_match
+    try:
+        from microdantic.microdantic import _is_discriminated_match
+    except ImportError:
+        from microdantic import _is_discriminated_match
 
     print("...Correctly identify matches")
     assert _is_discriminated_match("internal_key", "A", DiscriminatedModelA)
