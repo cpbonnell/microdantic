@@ -38,10 +38,6 @@ running `poetry run tests` inside the project directory.
 import json
 import time
 
-try:
-    from functools import cached_property
-except (ImportError, AttributeError):
-    from microdantic import cached_property
 
 from microdantic import (
     BaseModel,
@@ -51,6 +47,7 @@ from microdantic import (
     ValidationError,
     Validations,
     register,
+    cached_property,
 )
 
 

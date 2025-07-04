@@ -6,4 +6,5 @@ from microdantic.microdantic import (
     ValidationError,
     Validations,
     register,
+    cached_property,
 )
