@@ -1,3 +1,14 @@
+## 0.4.0 (2025-07-04)
+
+### Feat
+
+- on-the-fly cached property if no functools
+
+### Fix
+
+- do not convert methods and properties to a Field
+- do not convert methods and properties to a Field
+
 ## 0.3.1 (2025-06-22)
 
 ### Fix
