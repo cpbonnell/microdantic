@@ -38,6 +38,11 @@ running `poetry run tests` inside the project directory.
 import json
 import time
 
+try:
+    from functools import cached_property
+except (ImportError, AttributeError):
+    from microdantic import cached_property
+
 from microdantic import (
     BaseModel,
     Field,
@@ -134,6 +139,27 @@ class ModelWithDiscriminatedUnion(BaseModel):
     nested_model = Field(
         Union[DiscriminatedModelA, DiscriminatedModelB], discriminator="internal_key"
     )
+
+
+@register
+class ModelWithMethod(BaseModel):
+    a: int = Field(int)
+    b: int = Field(int)
+
+    def get_highest(self):
+        return max(self.a, self.b)
+
+    @property
+    def highest(self):
+        return self.get_highest()
+
+    @cached_property
+    def cached_highest(self):
+        return self.get_highest()
+
+    @staticmethod
+    def something_static():
+        return "something static"
 
 
 # ========== Test Functions ==========
@@ -354,7 +380,10 @@ def test_nested_union():
 
 
 def test_is_discriminated_match():
-    from microdantic.microdantic import _is_discriminated_match
+    try:
+        from microdantic.microdantic import _is_discriminated_match
+    except ImportError:
+        from microdantic import _is_discriminated_match
 
     print("...Correctly identify matches")
     assert _is_discriminated_match("internal_key", "A", DiscriminatedModelA)
@@ -403,6 +432,23 @@ def test_auto_discrimination_from_base_model():
 
     assert isinstance(ma_deserialized.nested_model, NestedModelA)
     assert isinstance(mb_deserialized.nested_model, NestedModelB)
+
+
+def test_model_with_methods():
+    print("...Instantiate model object")
+    model = ModelWithMethod(a=2, b=5)
+
+    print("...checking method")
+    assert model.get_highest() == 5, f"{model.get_highest()} != 5"
+
+    print("...checking property")
+    assert model.highest == 5, f"{model.highest} != 5"
+
+    print("...checking cached_property")
+    assert model.cached_highest == 5, f"{model.cached_highest} != 5"
+
+    print("...checking static method")
+    assert model.something_static(), f"{model.something_static()} != 'something static'"
 
 
 # ========== Test Execution ==========

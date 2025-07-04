@@ -25,6 +25,22 @@ SOFTWARE.
 __version__ = "v0.3.1"
 import json
 
+try:
+    from functools import cached_property
+except (ImportError, AttributeError):
+    # Fallback for CircuitPython or MicroPython
+    class cached_property:  # noqa
+        def __init__(self, func):
+            self.func = func
+            self.attr_name = func.__name__
+
+        def __get__(self, instance, owner):
+            if instance is None:
+                return self
+            value = self.func(instance)
+            setattr(instance, self.attr_name, value)
+            return value
+
 
 class _SpecialType:
     """
@@ -503,8 +519,13 @@ class BaseModel:
         # same type as the default value, rather than the type of the
         # annotation.
         new_fields = dict()
+        descriptor_types = (Field, property, classmethod, staticmethod, cached_property)
         for name, field in cls.__dict__.items():
-            if not name.startswith("_") and not isinstance(field, Field):
+            if (
+                not name.startswith("_")
+                and not callable(field)
+                and not isinstance(field, descriptor_types)
+            ):
                 new_fields[name] = Field(data_type=type(field), default=field)
 
         for name, field_obj in new_fields.items():
