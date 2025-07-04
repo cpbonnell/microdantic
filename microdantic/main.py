@@ -37,6 +37,7 @@ running `poetry run tests` inside the project directory.
 
 import json
 import time
+from functools import cached_property
 
 from microdantic import (
     BaseModel,
@@ -141,12 +142,20 @@ class ModelWithMethod(BaseModel):
     a: int = Field(int)
     b: int = Field(int)
 
-    @property
-    def highest(self):
-        return max(self.a, self.b)
-
     def get_highest(self):
         return max(self.a, self.b)
+
+    @property
+    def highest(self):
+        return self.get_highest()
+
+    @cached_property
+    def cached_highest(self):
+        return self.get_highest()
+
+    @staticmethod
+    def something_static():
+        return "something static"
 
 
 # ========== Test Functions ==========
@@ -423,10 +432,16 @@ def test_model_with_methods():
     model = ModelWithMethod(a=2, b=5)
 
     print("...checking method")
-    assert model.get_highest() == 5
+    assert model.get_highest() == 5, f"{model.get_highest()} != 5"
 
     print("...checking property")
-    assert model.highest == 5, f"model.highest is {model.highest}"
+    assert model.highest == 5, f"{model.highest} != 5"
+
+    print("...checking cached_property")
+    assert model.cached_highest == 5, f"{model.cached_highest} != 5"
+
+    print("...checking static method")
+    assert model.something_static(), f"{model.something_static()} != 'something static'"
 
 
 # ========== Test Execution ==========
